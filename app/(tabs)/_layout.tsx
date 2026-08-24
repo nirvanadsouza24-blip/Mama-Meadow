@@ -1,7 +1,10 @@
 import React from 'react';
 import { Stack } from 'expo-router';
+import { useSubscriptionGuard } from "@/hooks/useSubscriptionGuard";
 
 export default function TabLayout() {
+  useSubscriptionGuard();
+
   return (
     <Stack
       screenOptions={{
@@ -10,6 +13,7 @@ export default function TabLayout() {
       }}
     >
       <Stack.Screen key="home" name="(home)" />
+      <Stack.Screen key="mother" name="mother" />
     </Stack>
   );
 }
