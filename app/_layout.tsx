@@ -18,13 +18,12 @@ import { StatusBar } from "expo-status-bar";
 import { WidgetProvider } from "@/contexts/WidgetContext";
 import { SubscriptionProvider, useSubscription } from "@/contexts/SubscriptionContext";
 import { BabiesProvider } from "@/contexts/BabiesContext";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
 // Note: Error logging is auto-initialized via index.ts import
 
 // Only wrap with ErrorBoundary in dev — production apps should not include it
 import { isOnboardingComplete } from "@/utils/onboardingStorage";
-const DevErrorBoundary = __DEV__
-  ? ErrorBoundary
+const DevErrorBoundary: React.ComponentType<{ children: React.ReactNode }> = __DEV__
+  ? (require("@/components/ErrorBoundary").ErrorBoundary as React.ComponentType<{ children: React.ReactNode }>)
   : ({ children }: { children: React.ReactNode }) => <>{children}</>;
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
