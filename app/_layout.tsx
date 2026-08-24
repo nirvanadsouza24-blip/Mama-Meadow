@@ -17,6 +17,7 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { WidgetProvider } from "@/contexts/WidgetContext";
 import { SubscriptionProvider, useSubscription } from "@/contexts/SubscriptionContext";
+import { BabiesProvider } from "@/contexts/BabiesContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 // Note: Error logging is auto-initialized via index.ts import
 
@@ -138,6 +139,7 @@ export default function RootLayout() {
         >
           <SafeAreaProvider>
             <WidgetProvider>
+              <BabiesProvider>
               <GestureHandlerRootView>
               {onboardingComplete === false && pathname !== "/auth" && pathname !== "/paywall" && pathname !== "/auth-popup" && pathname !== "/auth-callback" && <Redirect href="/onboarding" />}
 
@@ -149,6 +151,7 @@ export default function RootLayout() {
               </Stack>
               <SystemBars style={"auto"} />
               </GestureHandlerRootView>
+              </BabiesProvider>
             </WidgetProvider>
           </SafeAreaProvider>
         </ThemeProvider>

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
   StyleSheet,
   View,
@@ -6,10 +6,17 @@ import {
   ScrollView,
   Pressable,
   Animated,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useBabies, Baby, LogType } from "@/contexts/BabiesContext";
 
 const COLORS = {
   background: "#FAF7F2",
@@ -80,9 +87,160 @@ function FadeInView({ children, delay = 0 }: { children: React.ReactNode; delay?
   );
 }
 
+const LOG_TYPES: LogType[] = ["Feed", "Sleep", "Diaper"];
+
+function BabyCard({ baby }: { baby: Baby }) {
+  const { logs, addLog } = useBabies();
+  const [loggedType, setLoggedType] = useState<LogType | null>(null);
+
+  const babyLogs = logs.filter((l) => l.babyId === baby.id);
+  const lastLog = babyLogs.length > 0 ? babyLogs[babyLogs.length - 1] : null;
+
+  const lastLogTime = lastLog
+    ? new Date(lastLog.time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    : null;
+  const lastLogText = lastLog ? `Last: ${lastLog.type} at ${lastLogTime}` : null;
+  const dobText = baby.dob ? `Born ${baby.dob}` : null;
+
+  const handleLog = useCallback(
+    (type: LogType) => {
+      console.log("[BabyCard] Quick-log button pressed", { babyId: baby.id, babyName: baby.name, type });
+      addLog(baby.id, type);
+      setLoggedType(type);
+      setTimeout(() => setLoggedType(null), 1500);
+    },
+    [baby.id, baby.name, addLog]
+  );
+
+  return (
+    <View style={styles.babyCard}>
+      <View style={styles.babyCardTop}>
+        <View style={styles.babyIconBadge}>
+          <Text style={styles.babyIconEmoji}>🍼</Text>
+        </View>
+        <View style={styles.babyCardInfo}>
+          <Text style={styles.babyName}>{baby.name}</Text>
+          {dobText !== null && <Text style={styles.babyDob}>{dobText}</Text>}
+        </View>
+      </View>
+      <View style={styles.logButtonRow}>
+        {LOG_TYPES.map((type) => (
+          <Pressable
+            key={type}
+            style={styles.logButton}
+            onPress={() => handleLog(type)}
+          >
+            <Text style={styles.logButtonText}>{type}</Text>
+          </Pressable>
+        ))}
+      </View>
+      {loggedType !== null && (
+        <Text style={styles.loggedConfirm}>
+          ✓ Logged
+        </Text>
+      )}
+      {loggedType === null && lastLogText !== null && (
+        <Text style={styles.lastLogText}>{lastLogText}</Text>
+      )}
+    </View>
+  );
+}
+
+function AddBabyModal({
+  visible,
+  onClose,
+}: {
+  visible: boolean;
+  onClose: () => void;
+}) {
+  const { addBaby } = useBabies();
+  const [name, setName] = useState("");
+  const [dob, setDob] = useState("");
+  const [nameError, setNameError] = useState("");
+
+  const handleAdd = useCallback(() => {
+    console.log("[AddBabyModal] Add baby button pressed", { name, dob });
+    if (!name.trim()) {
+      setNameError("Please enter a name");
+      return;
+    }
+    addBaby(name.trim(), dob.trim());
+    setName("");
+    setDob("");
+    setNameError("");
+    onClose();
+  }, [name, dob, addBaby, onClose]);
+
+  const handleCancel = useCallback(() => {
+    console.log("[AddBabyModal] Cancel button pressed");
+    setName("");
+    setDob("");
+    setNameError("");
+    onClose();
+  }, [onClose]);
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={handleCancel}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.modalKAV}
+          >
+            <TouchableWithoutFeedback>
+              <View style={styles.modalSheet}>
+                <Text style={styles.modalTitle}>Add a baby</Text>
+
+                <TextInput
+                  style={[styles.modalInput, nameError ? styles.modalInputError : null]}
+                  placeholder="Baby's name"
+                  placeholderTextColor={COLORS.textTertiary}
+                  value={name}
+                  onChangeText={(t) => {
+                    setName(t);
+                    if (nameError) setNameError("");
+                  }}
+                  returnKeyType="next"
+                />
+                {nameError !== "" && (
+                  <Text style={styles.inputError}>{nameError}</Text>
+                )}
+
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Date of birth (optional)"
+                  placeholderTextColor={COLORS.textTertiary}
+                  value={dob}
+                  onChangeText={setDob}
+                  returnKeyType="done"
+                  onSubmitEditing={handleAdd}
+                />
+
+                <Pressable style={styles.addBabyButton} onPress={handleAdd}>
+                  <Text style={styles.addBabyButtonText}>Add baby</Text>
+                </Pressable>
+                <Pressable style={styles.cancelButton} onPress={handleCancel}>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </Pressable>
+              </View>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   const { isSubscribed } = useSubscription();
+  const { babies } = useBabies();
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const handleYouTab = () => {
     console.log("[HomeScreen] You tab button pressed — navigating to mother screen");
@@ -92,6 +250,15 @@ export default function HomeScreen() {
   const handleGoPremium = () => {
     console.log("[HomeScreen] Go Premium button pressed");
     router.push("/paywall");
+  };
+
+  const handleOpenAddModal = () => {
+    console.log("[HomeScreen] + Add baby button pressed");
+    setShowAddModal(true);
+  };
+
+  const handleCloseAddModal = () => {
+    setShowAddModal(false);
   };
 
   return (
@@ -146,9 +313,31 @@ export default function HomeScreen() {
             </FadeInView>
           )}
 
+          {/* Your little ones section */}
+          <FadeInView delay={160}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionLabelText}>Your little ones</Text>
+              <Pressable style={styles.addBabyPill} onPress={handleOpenAddModal}>
+                <Text style={styles.addBabyPillText}>+ Add baby</Text>
+              </Pressable>
+            </View>
+
+            {babies.length === 0 ? (
+              <View style={styles.emptyBabiesCard}>
+                <Text style={styles.emptyBabiesEmoji}>🌱</Text>
+                <Text style={styles.emptyBabiesTitle}>Add your first little one</Text>
+                <Text style={styles.emptyBabiesSubtitle}>Tap + Add baby to get started</Text>
+              </View>
+            ) : (
+              babies.map((baby) => (
+                <BabyCard key={baby.id} baby={baby} />
+              ))
+            )}
+          </FadeInView>
+
           {/* You tab shortcut */}
-          <FadeInView delay={180}>
-            <View style={styles.sectionLabel}>
+          <FadeInView delay={220}>
+            <View style={[styles.sectionLabel, { marginTop: 8 }]}>
               <Text style={styles.sectionLabelText}>Your Space</Text>
             </View>
             <AnimatedPressable onPress={handleYouTab} scaleValue={0.985}>
@@ -168,6 +357,8 @@ export default function HomeScreen() {
             </AnimatedPressable>
           </FadeInView>
         </ScrollView>
+
+        <AddBabyModal visible={showAddModal} onClose={handleCloseAddModal} />
       </SafeAreaView>
     </>
   );
@@ -292,7 +483,7 @@ const styles = StyleSheet.create({
     fontFamily: "Karla_700Bold",
   },
 
-  // Section label
+  // Section label (shared)
   sectionLabel: {
     marginBottom: 10,
   },
@@ -303,6 +494,134 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.8,
     fontFamily: "Karla_700Bold",
+  },
+
+  // Your little ones section header
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  addBabyPill: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  addBabyPillText: {
+    fontSize: 12,
+    fontFamily: "Karla_700Bold",
+    color: "#fff",
+    fontWeight: "700",
+  },
+
+  // Baby card
+  babyCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: "#2C1A0E",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  babyCardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 12,
+  },
+  babyIconBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(74,124,89,0.10)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  babyIconEmoji: {
+    fontSize: 20,
+  },
+  babyCardInfo: {
+    flex: 1,
+  },
+  babyName: {
+    fontSize: 16,
+    fontFamily: "Fraunces_700Bold",
+    fontWeight: "700",
+    color: COLORS.text,
+    letterSpacing: -0.1,
+  },
+  babyDob: {
+    fontSize: 13,
+    fontFamily: "Karla_400Regular",
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  logButtonRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 8,
+  },
+  logButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(44,26,14,0.10)",
+    backgroundColor: COLORS.surfaceSecondary,
+  },
+  logButtonText: {
+    fontSize: 12,
+    fontFamily: "Karla_700Bold",
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
+  loggedConfirm: {
+    fontSize: 12,
+    fontFamily: "Karla_700Bold",
+    color: COLORS.primary,
+    marginTop: 2,
+  },
+  lastLogText: {
+    fontSize: 12,
+    fontFamily: "Karla_400Regular",
+    color: COLORS.textTertiary,
+    marginTop: 2,
+  },
+
+  // Empty state
+  emptyBabiesCard: {
+    backgroundColor: COLORS.surfaceSecondary,
+    borderRadius: 16,
+    padding: 28,
+    alignItems: "center",
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  emptyBabiesEmoji: {
+    fontSize: 32,
+    marginBottom: 10,
+  },
+  emptyBabiesTitle: {
+    fontSize: 16,
+    fontFamily: "Fraunces_700Bold",
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  emptyBabiesSubtitle: {
+    fontSize: 13,
+    fontFamily: "Karla_400Regular",
+    color: COLORS.textSecondary,
+    textAlign: "center",
   },
 
   // You card
@@ -352,5 +671,75 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: COLORS.textTertiary,
     fontWeight: "300",
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  modalKAV: {
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontFamily: "Fraunces_700Bold",
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 20,
+    letterSpacing: -0.2,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: "rgba(44,26,14,0.12)",
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    fontFamily: "Karla_400Regular",
+    color: COLORS.text,
+    marginBottom: 12,
+    backgroundColor: COLORS.surface,
+  },
+  modalInputError: {
+    borderColor: COLORS.accent,
+    marginBottom: 4,
+  },
+  inputError: {
+    fontSize: 13,
+    fontFamily: "Karla_400Regular",
+    color: COLORS.accent,
+    marginBottom: 10,
+  },
+  addBabyButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 14,
+    height: 52,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  addBabyButtonText: {
+    fontSize: 16,
+    fontFamily: "Karla_700Bold",
+    fontWeight: "700",
+    color: "#fff",
+  },
+  cancelButton: {
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  cancelButtonText: {
+    fontSize: 15,
+    fontFamily: "Karla_400Regular",
+    color: COLORS.textSecondary,
   },
 });
