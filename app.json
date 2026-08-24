@@ -1,5 +1,6 @@
 {
   "expo": {
+    "newArchEnabled": true,
     "name": "Mama Meadow",
     "slug": "mama-meadow",
     "version": "1.0.0",
