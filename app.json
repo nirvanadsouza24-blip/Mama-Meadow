@@ -4,10 +4,10 @@
     "slug": "mama-meadow",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/app-icon-zxu.png",
+    "icon": "./assets/images/mama.png",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/app-icon-zxu.png",
+      "image": "./assets/images/mama.png",
       "resizeMode": "contain",
       "backgroundColor": "#FFFFFF"
     },
@@ -20,7 +20,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/app-icon-zxu.png",
+        "foregroundImage": "./assets/images/mama.png",
         "backgroundColor": "#FFFFFF"
       },
       "package": "com.mamameadow.app"
