@@ -145,9 +145,8 @@ export default function PaywallScreen() {
 
   // Handle app store links for web
   const handleDownloadApp = () => {
-    // TODO: Replace with your actual app store URLs
-    const iosUrl = "https://apps.apple.com/app/your-app-id";
-    const androidUrl = "https://play.google.com/store/apps/details?id=your.app.id";
+    const iosUrl = "https://apps.apple.com/app/mama-meadow/id6746827698";
+    const androidUrl = "https://play.google.com/store/apps/details?id=com.mamameadow.app";
 
     // On web, we can't detect which device the user has, so show both options
     Alert.alert(
@@ -415,7 +414,20 @@ export default function PaywallScreen() {
                   )}
                 </TouchableOpacity>
                 <Text style={styles.legalText}>
-                  Preview mode — purchases available in the mobile app
+                  Preview mode — purchases available in the mobile app.{" "}
+                  <Text
+                    style={styles.legalLink}
+                    onPress={() => Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/privacy")}
+                  >
+                    Privacy Policy
+                  </Text>
+                  {" · "}
+                  <Text
+                    style={styles.legalLink}
+                    onPress={() => Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/terms")}
+                  >
+                    Terms of Use
+                  </Text>
                 </Text>
               </>
             ) : (
@@ -460,7 +472,20 @@ export default function PaywallScreen() {
                   Payment will be charged to your{" "}
                   {Platform.OS === "ios" ? "Apple ID" : "Google Play"} account.
                   Subscription automatically renews unless canceled at least 24 hours
-                  before the end of the current period.
+                  before the end of the current period.{" "}
+                  <Text
+                    style={styles.legalLink}
+                    onPress={() => Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/privacy")}
+                  >
+                    Privacy Policy
+                  </Text>
+                  {" · "}
+                  <Text
+                    style={styles.legalLink}
+                    onPress={() => Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/terms")}
+                  >
+                    Terms of Use
+                  </Text>
                 </Text>
               </>
             )}
@@ -770,6 +795,11 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.6)",
     textAlign: "center",
     lineHeight: 16,
+  },
+  legalLink: {
+    fontSize: 11,
+    color: "rgba(255, 255, 255, 0.9)",
+    textDecorationLine: "underline",
   },
 
   // Web mock purchase dialog (View-based, since Alert.alert with multiple buttons fails on web)
