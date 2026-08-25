@@ -93,11 +93,11 @@ function FadeInView({ children, delay = 0 }: { children: React.ReactNode; delay?
 }
 
 const PROFILE_ITEMS = [
-  { icon: "🌸", label: "My Profile", subtitle: "Name, photo, preferences" },
-  { icon: "🍼", label: "Baby Details", subtitle: "Age, milestones, notes" },
-  { icon: "📅", label: "Appointments", subtitle: "Upcoming check-ups" },
-  { icon: "🔔", label: "Notifications", subtitle: "Alerts and reminders" },
-  { icon: "🔒", label: "Privacy & Security", subtitle: "Account settings" },
+  { icon: "🌸", label: "My Profile", subtitle: "Name, photo, preferences", route: "/profile" },
+  { icon: "🍼", label: "Baby Details", subtitle: "Age, milestones, notes", route: "/baby-details" },
+  { icon: "📅", label: "Appointments", subtitle: "Upcoming check-ups", route: "/appointments" },
+  { icon: "🔔", label: "Notifications", subtitle: "Alerts and reminders", route: "/notifications" },
+  { icon: "🔒", label: "Privacy & Security", subtitle: "Account settings", route: "/privacy" },
 ];
 
 export default function MotherScreen() {
@@ -109,8 +109,14 @@ export default function MotherScreen() {
     router.push("/paywall");
   };
 
-  const handleProfileItem = (label: string) => {
-    console.log(`[MotherScreen] Profile item pressed: ${label}`);
+  const handleProfileItem = (label: string, route: string) => {
+    console.log(`[MotherScreen] Profile item pressed: ${label} → ${route}`);
+    router.push(route as any);
+  };
+
+  const handleWellness = () => {
+    console.log("[MotherScreen] Wellness Hub card pressed");
+    router.push("/wellness");
   };
 
   return (
@@ -194,7 +200,7 @@ export default function MotherScreen() {
               return (
                 <React.Fragment key={item.label}>
                   <AnimatedPressable
-                    onPress={() => handleProfileItem(item.label)}
+                    onPress={() => handleProfileItem(item.label, item.route)}
                     scaleValue={0.985}
                   >
                     <View style={styles.listItem}>
@@ -217,8 +223,34 @@ export default function MotherScreen() {
           </View>
         </FadeInView>
 
-        {/* App version */}
+        {/* Wellness Hub Card */}
         <FadeInView delay={200}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Wellness & Research</Text>
+          </View>
+          <AnimatedPressable onPress={handleWellness} scaleValue={0.975}>
+            <View style={styles.wellnessCard}>
+              <View style={styles.wellnessCardInner}>
+                <View style={styles.wellnessIconWrap}>
+                  <Text style={styles.wellnessIcon}>🌸</Text>
+                </View>
+                <View style={styles.wellnessTextWrap}>
+                  <Text style={styles.wellnessTitle}>Your Wellness Hub 🌸</Text>
+                  <Text style={styles.wellnessSubtitle}>
+                    Postpartum · Breastfeeding · Mental Health · More
+                  </Text>
+                </View>
+                <Text style={styles.wellnessChevron}>›</Text>
+              </View>
+              <Text style={styles.wellnessTagline}>
+                Evidence-based guidance for every stage of motherhood
+              </Text>
+            </View>
+          </AnimatedPressable>
+        </FadeInView>
+
+        {/* App version */}
+        <FadeInView delay={260}>
           <Text style={styles.versionText}>Mama Meadow · v1.0</Text>
         </FadeInView>
       </ScrollView>
@@ -461,6 +493,64 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: COLORS.divider,
     marginLeft: 68,
+  },
+
+  // Wellness Card
+  wellnessCard: {
+    backgroundColor: "#F7A8C4",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 28,
+    shadowColor: "#C8956C",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "rgba(247, 168, 196, 0.4)",
+  },
+  wellnessCardInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 10,
+  },
+  wellnessIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  wellnessIcon: {
+    fontSize: 24,
+  },
+  wellnessTextWrap: {
+    flex: 1,
+  },
+  wellnessTitle: {
+    fontSize: 17,
+    fontFamily: "Fraunces_700Bold",
+    color: COLORS.text,
+    letterSpacing: -0.2,
+    marginBottom: 3,
+  },
+  wellnessSubtitle: {
+    fontSize: 12,
+    fontFamily: "Karla_400Regular",
+    color: COLORS.textSecondary,
+  },
+  wellnessChevron: {
+    fontSize: 22,
+    color: COLORS.textSecondary,
+    fontWeight: "300",
+  },
+  wellnessTagline: {
+    fontSize: 13,
+    fontFamily: "Karla_400Regular",
+    color: COLORS.textSecondary,
+    lineHeight: 18,
   },
 
   // Footer
