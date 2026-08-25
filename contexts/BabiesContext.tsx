@@ -83,12 +83,12 @@ export function BabiesProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loaded) return;
-    storageSet(BABIES_KEY, JSON.stringify(babies));
+    storageSet(BABIES_KEY, JSON.stringify(babies)).catch(() => {});
   }, [babies, loaded]);
 
   useEffect(() => {
     if (!loaded) return;
-    storageSet(LOGS_KEY, JSON.stringify(logs));
+    storageSet(LOGS_KEY, JSON.stringify(logs)).catch(() => {});
   }, [logs, loaded]);
 
   const addBaby = useCallback((name: string, dob: string) => {

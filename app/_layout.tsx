@@ -27,7 +27,7 @@ const DevErrorBoundary: React.ComponentType<{ children: React.ReactNode }> = __D
   : ({ children }: { children: React.ReactNode }) => <>{children}</>;
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export const unstable_settings = {
   initialRouteName: "(tabs)", // Ensure any route can link back to `/`
@@ -77,14 +77,18 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    isOnboardingComplete().then((complete) => {
-      setOnboardingComplete(complete);
-    });
+    isOnboardingComplete()
+      .then((complete) => {
+        setOnboardingComplete(complete);
+      })
+      .catch(() => {
+        setOnboardingComplete(false);
+      });
   }, [pathname]);
 
   useEffect(() => {
     if (loaded) {
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch(() => {});
     }
   }, [loaded]);
 
@@ -130,7 +134,6 @@ export default function RootLayout() {
   };
   return (
     <SubscriptionProvider>
-          <SubscriptionRedirect />
   <DevErrorBoundary>
       <StatusBar style="auto" animated />
         <ThemeProvider
@@ -140,6 +143,7 @@ export default function RootLayout() {
             <WidgetProvider>
               <BabiesProvider>
               <GestureHandlerRootView>
+              <SubscriptionRedirect />
               {onboardingComplete === false && pathname !== "/auth" && pathname !== "/paywall" && pathname !== "/auth-popup" && pathname !== "/auth-callback" && <Redirect href="/onboarding" />}
 
               <Stack>
