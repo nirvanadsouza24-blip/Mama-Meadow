@@ -10,9 +10,11 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { usePremiumGate } from "@/hooks/usePremiumGate";
 
 const COLORS = {
   background: "#FAF7F2",
@@ -77,6 +79,7 @@ function FadeInItem({ children, index }: { children: React.ReactNode; index: num
 }
 
 export default function AppointmentsScreen() {
+  const { loading } = usePremiumGate();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [title, setTitle] = useState("");
@@ -149,6 +152,14 @@ export default function AppointmentsScreen() {
     console.log("[AppointmentsScreen] Add appointment button pressed");
     setModalVisible(true);
   };
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FAF7F2" }}>
+        <ActivityIndicator size="large" color="#4A7C59" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={["bottom"]}>

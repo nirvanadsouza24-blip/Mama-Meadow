@@ -404,11 +404,22 @@ export default function MotherScreen() {
 
   const handleProfileItem = (label: string, route: string) => {
     console.log(`[MotherScreen] Profile item pressed: ${label} → ${route}`);
+    const premiumRoutes = ["/baby-details", "/appointments"];
+    if (premiumRoutes.includes(route) && !isSubscribed) {
+      console.log(`[MotherScreen] Premium route blocked for non-subscriber: ${route} — redirecting to paywall`);
+      router.push("/paywall");
+      return;
+    }
     router.push(route as any);
   };
 
   const handleWellness = () => {
     console.log("[MotherScreen] Wellness Hub card pressed");
+    if (!isSubscribed) {
+      console.log("[MotherScreen] Wellness Hub blocked for non-subscriber — redirecting to paywall");
+      router.push("/paywall");
+      return;
+    }
     router.push("/wellness");
   };
 
@@ -419,6 +430,11 @@ export default function MotherScreen() {
 
   const handleHairCard = () => {
     console.log("[MotherScreen] Hair & Body Changes card pressed");
+    if (!isSubscribed) {
+      console.log("[MotherScreen] Hair & Body Changes blocked for non-subscriber — redirecting to paywall");
+      router.push("/paywall");
+      return;
+    }
     setHairModalVisible(true);
   };
 
@@ -429,6 +445,11 @@ export default function MotherScreen() {
 
   const handleMamaChat = () => {
     console.log("[MotherScreen] Chat with Mama Meadow card pressed");
+    if (!isSubscribed) {
+      console.log("[MotherScreen] Mama Chat blocked for non-subscriber — redirecting to paywall");
+      router.push("/paywall");
+      return;
+    }
     router.push("/(tabs)/mama-chat");
   };
 
@@ -549,6 +570,9 @@ export default function MotherScreen() {
           <View style={styles.card}>
             {PROFILE_ITEMS.map((item, index) => {
               const isLast = index === PROFILE_ITEMS.length - 1;
+              const premiumRoutes = ["/baby-details", "/appointments"];
+              const isPremiumItem = premiumRoutes.includes(item.route);
+              const showLock = isPremiumItem && !isSubscribed;
               return (
                 <React.Fragment key={item.label}>
                   <AnimatedPressable
@@ -563,7 +587,13 @@ export default function MotherScreen() {
                         <Text style={styles.listItemLabel}>{item.label}</Text>
                         <Text style={styles.listItemSubtitle}>{item.subtitle}</Text>
                       </View>
-                      <Text style={styles.listItemChevron}>›</Text>
+                      {showLock ? (
+                        <View style={styles.lockPill}>
+                          <Text style={styles.lockPillText}>Premium</Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.listItemChevron}>›</Text>
+                      )}
                     </View>
                   </AnimatedPressable>
                   {!isLast && <View style={styles.divider} />}
@@ -1031,6 +1061,20 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: COLORS.textTertiary,
     fontWeight: "300",
+  },
+  lockPill: {
+    backgroundColor: "rgba(74, 124, 89, 0.12)",
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: "rgba(74, 124, 89, 0.25)",
+  },
+  lockPillText: {
+    fontSize: 11,
+    fontFamily: "Karla_700Bold",
+    color: COLORS.primary,
+    letterSpacing: 0.2,
   },
   divider: {
     height: 1,

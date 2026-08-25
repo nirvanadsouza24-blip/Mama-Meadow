@@ -287,8 +287,8 @@ export default function PaywallScreen() {
         <View style={[styles.floatingOrb, styles.orb3]} />
 
         <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
-          {/* Close button — top-right, always visible */}
-          {!isWeb && (
+          {/* Close button — web preview only */}
+          {isWeb && (
             <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
@@ -513,11 +513,6 @@ export default function PaywallScreen() {
                     Terms of Use
                   </Text>
                 </Text>
-
-                {/* Maybe Later — always visible escape route */}
-                <TouchableOpacity style={styles.maybeLaterButton} onPress={handleClose}>
-                  <Text style={styles.maybeLaterText}>Maybe Later</Text>
-                </TouchableOpacity>
               </>
             )}
           </View>

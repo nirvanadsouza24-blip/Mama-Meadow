@@ -10,11 +10,13 @@ import {
   Platform,
   Modal,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useBabies, Baby } from "@/contexts/BabiesContext";
+import { usePremiumGate } from "@/hooks/usePremiumGate";
 
 const COLORS = {
   background: "#FAF7F2",
@@ -512,6 +514,15 @@ function BabyCard({ baby, index }: { baby: Baby; index: number }) {
 
 export default function BabyDetailsScreen() {
   const { babies } = useBabies();
+  const { loading } = usePremiumGate();
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FAF7F2" }}>
+        <ActivityIndicator size="large" color="#4A7C59" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={["bottom"]}>

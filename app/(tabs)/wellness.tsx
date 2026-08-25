@@ -6,8 +6,10 @@ import {
   Pressable,
   Animated,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { usePremiumGate } from "@/hooks/usePremiumGate";
 
 const COLORS = {
   background: "#FAF7F2",
@@ -387,12 +389,21 @@ function ArticleModal({ topic, onClose }: { topic: Topic; onClose: () => void })
 }
 
 export default function WellnessScreen() {
+  const { loading } = usePremiumGate();
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
 
   const handleTopicPress = (topic: Topic) => {
     console.log("[WellnessScreen] Topic card pressed:", topic.id);
     setSelectedTopic(topic);
   };
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FAF7F2" }}>
+        <ActivityIndicator size="large" color="#4A7C59" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={["bottom"]}>

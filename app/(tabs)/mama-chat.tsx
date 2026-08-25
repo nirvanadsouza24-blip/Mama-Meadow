@@ -10,11 +10,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useSubscription } from "@/contexts/SubscriptionContext";
+import { usePremiumGate } from "@/hooks/usePremiumGate";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -263,7 +264,7 @@ function LockedState() {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function MamaChatScreen() {
   const router = useRouter();
-  const { isSubscribed } = useSubscription();
+  const { isSubscribed, loading } = usePremiumGate();
   const scrollRef = useRef<ScrollView>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -335,6 +336,14 @@ export default function MamaChatScreen() {
     console.log("[MamaChat] Back button pressed");
     router.back();
   };
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FAF7F2" }}>
+        <ActivityIndicator size="large" color="#4A7C59" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
