@@ -827,14 +827,6 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.9)",
     textDecorationLine: "underline",
   },
-  maybeLaterButton: {
-    paddingVertical: 8,
-    alignItems: "center",
-  },
-  maybeLaterText: {
-    fontSize: 13,
-    color: "rgba(255, 255, 255, 0.45)",
-  },
   closeButton: {
     position: "absolute",
     top: 16,
