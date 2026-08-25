@@ -8,9 +8,12 @@ import {
   Animated,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useBabies, Baby } from "@/contexts/BabiesContext";
 
 const COLORS = {
@@ -86,6 +89,15 @@ function BabyCard({ baby, index }: { baby: Baby; index: number }) {
   const [notes, setNotes] = useState("");
   const [notesSaved, setNotesSaved] = useState(false);
 
+  // Edit modal state
+  const [editVisible, setEditVisible] = useState(false);
+  const [editName, setEditName] = useState(baby.name);
+  const [editDob, setEditDob] = useState(baby.dob);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const editDateValue = editDob ? new Date(editDob) : new Date();
+
+  const { updateBaby, removeBaby } = useBabies();
+
   const milestonesKey = `@mamameadow/milestones/${baby.id}`;
   const notesKey = `@mamameadow/notes/${baby.id}`;
 
@@ -125,6 +137,54 @@ function BabyCard({ baby, index }: { baby: Baby; index: number }) {
     setTimeout(() => setNotesSaved(false), 2000);
   }, [notes, baby.id]);
 
+  const openEdit = useCallback(() => {
+    console.log(`[BabyDetails] Edit button pressed for baby: ${baby.id} (${baby.name})`);
+    setEditName(baby.name);
+    setEditDob(baby.dob);
+    setShowDatePicker(false);
+    setEditVisible(true);
+  }, [baby.id, baby.name, baby.dob]);
+
+  const handleSaveEdit = useCallback(() => {
+    const trimmedName = editName.trim();
+    if (!trimmedName) return;
+    console.log(`[BabyDetails] Save edit pressed for baby: ${baby.id}`, { name: trimmedName, dob: editDob });
+    updateBaby(baby.id, trimmedName, editDob);
+    setEditVisible(false);
+  }, [baby.id, editName, editDob, updateBaby]);
+
+  const handleDelete = useCallback(() => {
+    console.log(`[BabyDetails] Delete button pressed for baby: ${baby.id} (${baby.name})`);
+    Alert.alert(
+      `Remove ${baby.name}?`,
+      "This will also remove all their logs and milestones. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel", onPress: () => console.log(`[BabyDetails] Delete cancelled for baby: ${baby.id}`) },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            console.log(`[BabyDetails] Confirmed delete for baby: ${baby.id}`);
+            await Promise.all([
+              AsyncStorage.removeItem(milestonesKey).catch(() => {}),
+              AsyncStorage.removeItem(notesKey).catch(() => {}),
+            ]);
+            removeBaby(baby.id);
+          },
+        },
+      ]
+    );
+  }, [baby.id, baby.name, milestonesKey, notesKey, removeBaby]);
+
+  const handleDateChange = useCallback((_event: unknown, selected?: Date) => {
+    if (Platform.OS === "android") setShowDatePicker(false);
+    if (selected) {
+      const iso = selected.toISOString().split("T")[0];
+      console.log(`[BabyDetails] DOB picker changed for baby: ${baby.id}`, { dob: iso });
+      setEditDob(iso);
+    }
+  }, [baby.id]);
+
   return (
     <FadeInView delay={index * 100}>
       <View style={{
@@ -161,6 +221,35 @@ function BabyCard({ baby, index }: { baby: Baby; index: number }) {
             <Text style={{ fontSize: 13, fontFamily: "Karla_400Regular", color: COLORS.textSecondary, marginTop: 2 }}>
               Born {baby.dob}
             </Text>
+          </View>
+          {/* Edit / Delete buttons */}
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Pressable
+              onPress={openEdit}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: "rgba(255,255,255,0.5)",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontSize: 16 }}>✏️</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleDelete}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: "rgba(255,255,255,0.5)",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontSize: 16 }}>🗑️</Text>
+            </Pressable>
           </View>
         </View>
 
@@ -243,6 +332,180 @@ function BabyCard({ baby, index }: { baby: Baby; index: number }) {
           )}
         </View>
       </View>
+
+      {/* Edit Modal */}
+      <Modal
+        visible={editVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEditVisible(false)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.35)" }}
+          onPress={() => setEditVisible(false)}
+        />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}
+        >
+          <View style={{
+            backgroundColor: COLORS.background,
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            paddingHorizontal: 24,
+            paddingBottom: Platform.OS === "ios" ? 40 : 28,
+            paddingTop: 16,
+          }}>
+            {/* Drag handle */}
+            <View style={{
+              width: 40,
+              height: 4,
+              borderRadius: 2,
+              backgroundColor: COLORS.border,
+              alignSelf: "center",
+              marginBottom: 20,
+            }} />
+
+            <Text style={{
+              fontSize: 20,
+              fontFamily: "Fraunces_700Bold",
+              color: COLORS.text,
+              letterSpacing: -0.2,
+              marginBottom: 24,
+            }}>
+              Edit Baby Details
+            </Text>
+
+            {/* Name field */}
+            <Text style={{
+              fontSize: 12,
+              fontFamily: "Karla_700Bold",
+              color: COLORS.textTertiary,
+              textTransform: "uppercase",
+              letterSpacing: 0.7,
+              marginBottom: 8,
+            }}>
+              Name
+            </Text>
+            <TextInput
+              value={editName}
+              onChangeText={(v) => {
+                console.log(`[BabyDetails] Edit name changed for baby: ${baby.id}`, { name: v });
+                setEditName(v);
+              }}
+              placeholder="Baby's name"
+              placeholderTextColor={COLORS.textTertiary}
+              style={{
+                backgroundColor: COLORS.surface,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: COLORS.border,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                fontSize: 15,
+                fontFamily: "Karla_400Regular",
+                color: COLORS.text,
+                marginBottom: 20,
+              }}
+            />
+
+            {/* DOB field */}
+            <Text style={{
+              fontSize: 12,
+              fontFamily: "Karla_700Bold",
+              color: COLORS.textTertiary,
+              textTransform: "uppercase",
+              letterSpacing: 0.7,
+              marginBottom: 8,
+            }}>
+              Date of Birth
+            </Text>
+
+            {Platform.OS === "ios" ? (
+              <View style={{
+                backgroundColor: COLORS.surface,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: COLORS.border,
+                marginBottom: 20,
+                overflow: "hidden",
+              }}>
+                <DateTimePicker
+                  value={editDateValue}
+                  mode="date"
+                  display="spinner"
+                  onChange={handleDateChange}
+                  maximumDate={new Date()}
+                  style={{ height: 120 }}
+                />
+              </View>
+            ) : (
+              <>
+                <Pressable
+                  onPress={() => {
+                    console.log(`[BabyDetails] DOB picker opened for baby: ${baby.id}`);
+                    setShowDatePicker(true);
+                  }}
+                  style={{
+                    backgroundColor: COLORS.surface,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: COLORS.border,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    marginBottom: 20,
+                  }}
+                >
+                  <Text style={{ fontSize: 15, fontFamily: "Karla_400Regular", color: editDob ? COLORS.text : COLORS.textTertiary }}>
+                    {editDob || "YYYY-MM-DD"}
+                  </Text>
+                </Pressable>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={editDateValue}
+                    mode="date"
+                    display="default"
+                    onChange={handleDateChange}
+                    maximumDate={new Date()}
+                  />
+                )}
+              </>
+            )}
+
+            {/* Buttons */}
+            <Pressable
+              onPress={handleSaveEdit}
+              style={{
+                backgroundColor: COLORS.primary,
+                borderRadius: 14,
+                paddingVertical: 15,
+                alignItems: "center",
+                marginBottom: 12,
+              }}
+            >
+              <Text style={{ fontSize: 16, fontFamily: "Karla_700Bold", color: "#fff" }}>
+                Save Changes
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                console.log(`[BabyDetails] Edit modal cancelled for baby: ${baby.id}`);
+                setEditVisible(false);
+              }}
+              style={{
+                backgroundColor: COLORS.surfaceSecondary,
+                borderRadius: 14,
+                paddingVertical: 15,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontSize: 16, fontFamily: "Karla_400Regular", color: COLORS.textSecondary }}>
+                Cancel
+              </Text>
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </FadeInView>
   );
 }
