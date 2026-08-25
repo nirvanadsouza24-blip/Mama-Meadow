@@ -96,9 +96,16 @@ function BabyCard({ baby, index }: { baby: Baby; index: number }) {
       AsyncStorage.getItem(notesKey),
     ]).then(([mRaw, nRaw]) => {
       if (mRaw) {
-        try { setMilestones(JSON.parse(mRaw)); } catch {}
+        try {
+          const parsed = JSON.parse(mRaw);
+          setMilestones(Array.isArray(parsed) ? parsed : []);
+        } catch {
+          setMilestones([]);
+        }
       }
       if (nRaw) setNotes(nRaw);
+    }).catch(() => {
+      setMilestones([]);
     });
   }, [baby.id]);
 
@@ -108,12 +115,12 @@ function BabyCard({ baby, index }: { baby: Baby; index: number }) {
       ? milestones.filter((m) => m !== milestone)
       : [...milestones, milestone];
     setMilestones(updated);
-    await AsyncStorage.setItem(milestonesKey, JSON.stringify(updated));
+    await AsyncStorage.setItem(milestonesKey, JSON.stringify(updated)).catch(() => {});
   }, [milestones, baby.id]);
 
   const saveNotes = useCallback(async () => {
     console.log(`[BabyDetails] Saving notes for baby: ${baby.id}`);
-    await AsyncStorage.setItem(notesKey, notes);
+    await AsyncStorage.setItem(notesKey, notes).catch(() => {});
     setNotesSaved(true);
     setTimeout(() => setNotesSaved(false), 2000);
   }, [notes, baby.id]);

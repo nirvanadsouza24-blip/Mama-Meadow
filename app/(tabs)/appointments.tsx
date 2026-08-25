@@ -88,13 +88,20 @@ export default function AppointmentsScreen() {
     console.log("[AppointmentsScreen] Loading appointments from AsyncStorage");
     AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
       if (raw) {
-        try { setAppointments(JSON.parse(raw)); } catch {}
+        try {
+          const parsed = JSON.parse(raw);
+          setAppointments(Array.isArray(parsed) ? parsed : []);
+        } catch {
+          setAppointments([]);
+        }
       }
+    }).catch(() => {
+      setAppointments([]);
     });
   }, []);
 
   const saveAppointments = useCallback(async (updated: Appointment[]) => {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated)).catch(() => {});
   }, []);
 
   const handleAdd = useCallback(async () => {

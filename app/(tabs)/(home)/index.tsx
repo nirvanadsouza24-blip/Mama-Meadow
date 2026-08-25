@@ -12,11 +12,115 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useBabies, Baby, LogType } from "@/contexts/BabiesContext";
+
+const { width: SW, height: SH } = Dimensions.get("window");
+
+// ─── Floating Nature ──────────────────────────────────────────────────────────
+const NATURE_ELEMENTS = [
+  { emoji: "🌼", top: SH * 0.12, left: SW * 0.08, size: 22, delay: 0, floatRange: 20, driftRange: 10, floatDur: 3800, driftDur: 5200, opacDur: 4500 },
+  { emoji: "🦋", top: SH * 0.18, right: SW * 0.12, size: 20, delay: 800, floatRange: 18, driftRange: 12, floatDur: 4200, driftDur: 6000, opacDur: 5000, rotate: true },
+  { emoji: "🌸", top: SH * 0.35, left: SW * 0.05, size: 18, delay: 1600, floatRange: 22, driftRange: 9, floatDur: 4600, driftDur: 4800, opacDur: 4200 },
+  { emoji: "🌼", top: SH * 0.55, right: SW * 0.08, size: 16, delay: 400, floatRange: 15, driftRange: 11, floatDur: 3500, driftDur: 5500, opacDur: 5500 },
+  { emoji: "🌿", top: SH * 0.70, left: SW * 0.15, size: 14, delay: 1200, floatRange: 17, driftRange: 8, floatDur: 4000, driftDur: 4400, opacDur: 4800 },
+  { emoji: "🌸", top: SH * 0.82, right: SW * 0.18, size: 18, delay: 2000, floatRange: 19, driftRange: 10, floatDur: 4400, driftDur: 6200, opacDur: 5200 },
+] as const;
+
+function FloatingNature() {
+  const anims = useRef(
+    NATURE_ELEMENTS.map(() => ({
+      translateY: new Animated.Value(0),
+      translateX: new Animated.Value(0),
+      opacity: new Animated.Value(0.35),
+      rotate: new Animated.Value(0),
+    }))
+  ).current;
+
+  useEffect(() => {
+    NATURE_ELEMENTS.forEach((el, i) => {
+      const { translateY, translateX, opacity, rotate } = anims[i];
+
+      // Vertical float
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(translateY, { toValue: -el.floatRange, duration: el.floatDur / 2, delay: el.delay, useNativeDriver: true }),
+          Animated.timing(translateY, { toValue: el.floatRange, duration: el.floatDur, useNativeDriver: true }),
+          Animated.timing(translateY, { toValue: 0, duration: el.floatDur / 2, useNativeDriver: true }),
+        ])
+      ).start();
+
+      // Horizontal drift
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(translateX, { toValue: -el.driftRange, duration: el.driftDur / 2, delay: el.delay, useNativeDriver: true }),
+          Animated.timing(translateX, { toValue: el.driftRange, duration: el.driftDur, useNativeDriver: true }),
+          Animated.timing(translateX, { toValue: 0, duration: el.driftDur / 2, useNativeDriver: true }),
+        ])
+      ).start();
+
+      // Opacity pulse
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(opacity, { toValue: 0.55, duration: el.opacDur / 2, delay: el.delay, useNativeDriver: true }),
+          Animated.timing(opacity, { toValue: 0.25, duration: el.opacDur / 2, useNativeDriver: true }),
+        ])
+      ).start();
+
+      // Rotation for butterfly
+      if ((el as any).rotate) {
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(rotate, { toValue: 1, duration: 1500, delay: el.delay, useNativeDriver: true }),
+            Animated.timing(rotate, { toValue: -1, duration: 3000, useNativeDriver: true }),
+            Animated.timing(rotate, { toValue: 0, duration: 1500, useNativeDriver: true }),
+          ])
+        ).start();
+      }
+    });
+  }, []);
+
+  return (
+    <View style={floatingStyles.container} pointerEvents="none">
+      {NATURE_ELEMENTS.map((el, i) => {
+        const { translateY, translateX, opacity, rotate } = anims[i];
+        const rotateInterp = rotate.interpolate({ inputRange: [-1, 1], outputRange: ["-5deg", "5deg"] });
+        const posStyle: Record<string, number> = { top: el.top };
+        if ("left" in el) posStyle.left = (el as any).left;
+        if ("right" in el) posStyle.right = (el as any).right;
+        const hasRotate = !!(el as any).rotate;
+        const transform = hasRotate
+          ? ([{ translateY }, { translateX }, { rotate: rotateInterp }] as any)
+          : ([{ translateY }, { translateX }] as any);
+        return (
+          <Animated.View
+            key={i}
+            style={[floatingStyles.element, posStyle, { opacity, transform }]}
+          >
+            <Text style={{ fontSize: el.size }}>{el.emoji}</Text>
+          </Animated.View>
+        );
+      })}
+    </View>
+  );
+}
+
+const floatingStyles = StyleSheet.create({
+  container: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  element: {
+    position: "absolute",
+  },
+});
 
 const COLORS = {
   background: "#FAF7F2",
@@ -262,7 +366,8 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={[styles.safeArea, { position: "relative" }]} edges={["top"]}>
+      <FloatingNature />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

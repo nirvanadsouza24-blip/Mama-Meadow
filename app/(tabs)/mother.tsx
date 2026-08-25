@@ -239,12 +239,12 @@ function MoodCheckin() {
       if (!raw) return;
       try {
         const saved = JSON.parse(raw);
-        if (saved.date === todayKey && typeof saved.index === "number") {
+        if (saved && saved.date === todayKey && typeof saved.index === "number") {
           setSelectedMood(saved.index);
           messageOpacity.setValue(1);
         }
       } catch {}
-    });
+    }).catch(() => {});
   }, []);
 
   const handleMoodSelect = useCallback(
@@ -254,7 +254,7 @@ function MoodCheckin() {
       setSelectedMood(idx);
       messageOpacity.setValue(0);
       Animated.timing(messageOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
-      AsyncStorage.setItem(MOOD_STORAGE_KEY, JSON.stringify({ date: todayKey, index: idx }));
+      AsyncStorage.setItem(MOOD_STORAGE_KEY, JSON.stringify({ date: todayKey, index: idx })).catch(() => {});
     },
     []
   );
@@ -427,6 +427,11 @@ export default function MotherScreen() {
     setHairModalVisible(false);
   };
 
+  const handleMamaChat = () => {
+    console.log("[MotherScreen] Chat with Mama Meadow card pressed");
+    router.push("/(tabs)/mama-chat");
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScrollView
@@ -511,6 +516,30 @@ export default function MotherScreen() {
             </View>
           </FadeInView>
         )}
+
+        {/* Chat with Mama Meadow Card */}
+        <FadeInView delay={270}>
+          <AnimatedPressable onPress={handleMamaChat} scaleValue={0.975}>
+            <View style={styles.mamaChatCard}>
+              <View style={styles.mamaChatInner}>
+                <View style={styles.mamaChatIconWrap}>
+                  <Text style={styles.mamaChatIcon}>💬</Text>
+                </View>
+                <View style={styles.mamaChatTextWrap}>
+                  <Text style={styles.mamaChatTitle}>Chat with Mama Meadow</Text>
+                  <Text style={styles.mamaChatSubtitle}>Your caring companion, always here for you</Text>
+                </View>
+                {isSubscribed ? (
+                  <Text style={styles.mamaChatChevron}>›</Text>
+                ) : (
+                  <View style={styles.premiumPill}>
+                    <Text style={styles.premiumPillText}>Premium</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </AnimatedPressable>
+        </FadeInView>
 
         {/* Profile Section */}
         <FadeInView delay={300}>
@@ -1123,6 +1152,70 @@ const styles = StyleSheet.create({
     fontFamily: "Karla_400Regular",
     color: COLORS.textSecondary,
     lineHeight: 18,
+  },
+
+  // ── Mama Chat Card ──
+  mamaChatCard: {
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 24,
+    backgroundColor: "#FFB3C6",
+    shadowColor: "#C9B8FF",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: "rgba(201, 184, 255, 0.4)",
+  },
+  mamaChatInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  mamaChatIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "rgba(255,255,255,0.55)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  mamaChatIcon: {
+    fontSize: 26,
+  },
+  mamaChatTextWrap: {
+    flex: 1,
+  },
+  mamaChatTitle: {
+    fontSize: 18,
+    fontFamily: "Fraunces_700Bold",
+    color: COLORS.text,
+    letterSpacing: -0.2,
+    marginBottom: 3,
+  },
+  mamaChatSubtitle: {
+    fontSize: 13,
+    fontFamily: "Karla_400Regular",
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+  },
+  mamaChatChevron: {
+    fontSize: 24,
+    color: COLORS.textSecondary,
+    fontWeight: "300",
+  },
+  premiumPill: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  premiumPillText: {
+    fontSize: 12,
+    fontFamily: "Karla_700Bold",
+    color: "#7C5CBF",
+    letterSpacing: 0.3,
   },
 
   // ── Footer ──
