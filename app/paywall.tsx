@@ -89,17 +89,26 @@ export default function PaywallScreen() {
 
   // Handle purchase
   const handlePurchase = async () => {
-    if (!selectedPackage) return;
+    if (!selectedPackage) {
+      console.log('[Paywall] Subscribe tapped but no package selected — showing retry alert');
+      Alert.alert("Plans Loading", "Plans are loading, please wait a moment and try again.");
+      return;
+    }
 
+    console.log('[Paywall] Purchase initiated for package:', selectedPackage.identifier);
     try {
       setPurchasing(true);
       const success = await purchasePackage(selectedPackage);
       if (success) {
+        console.log('[Paywall] Purchase succeeded for package:', selectedPackage.identifier);
         Alert.alert("Welcome!", "Thank you for your purchase.", [
           { text: "OK", onPress: () => router.replace("/(tabs)/(home)") },
         ]);
+      } else {
+        console.log('[Paywall] Purchase returned false (cancelled or failed) for package:', selectedPackage.identifier);
       }
     } catch (error: any) {
+      console.log('[Paywall] Purchase error:', error.message);
       Alert.alert("Purchase Failed", error.message || "Please try again.");
     } finally {
       setPurchasing(false);
@@ -108,20 +117,24 @@ export default function PaywallScreen() {
 
   // Handle restore
   const handleRestore = async () => {
+    console.log('[Paywall] Restore purchases tapped');
     try {
       setRestoring(true);
       const restored = await restorePurchases();
       if (restored) {
+        console.log('[Paywall] Restore succeeded');
         Alert.alert("Restored!", "Your subscription has been restored.", [
           { text: "OK", onPress: () => router.replace("/(tabs)/(home)") },
         ]);
       } else {
+        console.log('[Paywall] Restore found no purchases');
         Alert.alert(
           "No Purchases Found",
           "We couldn't find any previous purchases."
         );
       }
     } catch (error: any) {
+      console.log('[Paywall] Restore error:', error.message);
       Alert.alert("Restore Failed", error.message || "Please try again.");
     } finally {
       setRestoring(false);
@@ -129,6 +142,7 @@ export default function PaywallScreen() {
   };
 
   const handleClose = () => {
+    console.log('[Paywall] Dismiss tapped — navigating to home');
     router.replace("/(tabs)/(home)");
   };
 
@@ -273,6 +287,13 @@ export default function PaywallScreen() {
         <View style={[styles.floatingOrb, styles.orb3]} />
 
         <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
+          {/* Close button — top-right, always visible */}
+          {!isWeb && (
+            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          )}
+
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
@@ -348,27 +369,32 @@ export default function PaywallScreen() {
             )}
 
             {/* No packages available - only show on native */}
-            {/* This appears in standard Expo Go because react-native-purchases */}
-            {/* native module is not bundled in Expo Go. Use a dev build to test purchases. */}
             {!isWeb && packages.length === 0 && !loading && (
               <View style={styles.noPackagesContainer}>
-                <Text style={styles.noPackagesText}>
-                  Purchases are not available in standard Expo Go.
-                </Text>
-                <Text style={[styles.noPackagesText, { marginTop: 8, opacity: 0.7 }]}>
-                  To test purchases, use a development build or production build.
-                  {"\n"}This is expected — your onboarding and storage are working correctly.
-                </Text>
-                {__DEV__ && (
-                  <TouchableOpacity
-                    style={styles.devMockButton}
-                    onPress={async () => {
-                      await mockNativePurchase();
-                      router.replace("/(tabs)/(home)");
-                    }}
-                  >
-                    <Text style={styles.devMockButtonText}>Dev: Simulate Purchase</Text>
-                  </TouchableOpacity>
+                {__DEV__ ? (
+                  <>
+                    <Text style={styles.noPackagesText}>
+                      Purchases are not available in standard Expo Go.
+                    </Text>
+                    <Text style={[styles.noPackagesText, { marginTop: 8, opacity: 0.7 }]}>
+                      To test purchases, use a development build or production build.
+                      {"\n"}This is expected — your onboarding and storage are working correctly.
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.devMockButton}
+                      onPress={async () => {
+                        console.log('[Paywall] Dev: Simulate Purchase tapped');
+                        await mockNativePurchase();
+                        router.replace("/(tabs)/(home)");
+                      }}
+                    >
+                      <Text style={styles.devMockButtonText}>Dev: Simulate Purchase</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <Text style={styles.noPackagesText}>
+                    Subscription plans are temporarily unavailable. Please try again later.
+                  </Text>
                 )}
               </View>
             )}
@@ -436,10 +462,10 @@ export default function PaywallScreen() {
                 <TouchableOpacity
                   style={[
                     styles.primaryButton,
-                    (!selectedPackage || purchasing) && styles.buttonDisabled,
+                    purchasing && styles.buttonDisabled,
                   ]}
                   onPress={handlePurchase}
-                  disabled={!selectedPackage || purchasing}
+                  disabled={purchasing}
                 >
                   {purchasing ? (
                     <ActivityIndicator color="#764BA2" />
@@ -449,7 +475,7 @@ export default function PaywallScreen() {
                         ? (selectedPackage.product.priceString
                             ? `Subscribe for ${selectedPackage.product.priceString}`
                             : "Subscribe")
-                        : "Select a plan"}
+                        : "Subscribe"}
                     </Text>
                   )}
                 </TouchableOpacity>
@@ -487,6 +513,11 @@ export default function PaywallScreen() {
                     Terms of Use
                   </Text>
                 </Text>
+
+                {/* Maybe Later — always visible escape route */}
+                <TouchableOpacity style={styles.maybeLaterButton} onPress={handleClose}>
+                  <Text style={styles.maybeLaterText}>Maybe Later</Text>
+                </TouchableOpacity>
               </>
             )}
           </View>
@@ -800,6 +831,31 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "rgba(255, 255, 255, 0.9)",
     textDecorationLine: "underline",
+  },
+  maybeLaterButton: {
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  maybeLaterText: {
+    fontSize: 13,
+    color: "rgba(255, 255, 255, 0.45)",
+  },
+  closeButton: {
+    position: "absolute",
+    top: 16,
+    right: 20,
+    zIndex: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  closeButtonText: {
+    fontSize: 16,
+    color: "rgba(255, 255, 255, 0.8)",
+    fontWeight: "600",
   },
 
   // Web mock purchase dialog (View-based, since Alert.alert with multiple buttons fails on web)
