@@ -174,7 +174,7 @@ export default function PaywallScreen() {
       "To subscribe, please download our app from your device's app store.",
       [
         { text: "App Store (iOS)", onPress: () => Linking.openURL(iosUrl) },
-        { text: "Google Play", onPress: () => Linking.openURL(androidUrl) },
+        { text: "Android Store", onPress: () => Linking.openURL(androidUrl) },
         { text: "Cancel", style: "cancel" },
       ]
     );
