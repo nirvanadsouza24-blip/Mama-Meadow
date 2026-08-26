@@ -69,6 +69,8 @@ export default function PaywallScreen() {
     isWeb,
     purchasePackage,
     restorePurchases,
+    checkSubscription,
+    refreshOfferings,
     mockWebPurchase,
     mockNativePurchase,
   } = useSubscription();
@@ -77,6 +79,7 @@ export default function PaywallScreen() {
     useState<PurchasesPackage | null>(packages[0] || null);
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [webMockState, setWebMockState] = useState<"idle" | "processing">("idle");
   const [webMockDialogState, setWebMockDialogState] = useState<"hidden" | "selecting" | "failed">("hidden");
 
@@ -90,8 +93,11 @@ export default function PaywallScreen() {
   // Handle purchase
   const handlePurchase = async () => {
     if (!selectedPackage) {
-      console.log('[Paywall] Subscribe tapped but no package selected — showing retry alert');
-      Alert.alert("Plans Loading", "Plans are loading, please wait a moment and try again.");
+      console.log('[Paywall] Subscribe tapped but no package selected — triggering re-fetch');
+      setRetrying(true);
+      await checkSubscription();
+      await refreshOfferings();
+      setRetrying(false);
       return;
     }
 
@@ -392,9 +398,28 @@ export default function PaywallScreen() {
                     </TouchableOpacity>
                   </>
                 ) : (
-                  <Text style={styles.noPackagesText}>
-                    Subscription plans are temporarily unavailable. Please try again later.
-                  </Text>
+                  <>
+                    <Text style={styles.noPackagesText}>
+                      Could not load subscription plans.{"\n"}Please check your connection and try again.
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.retryButton}
+                      onPress={async () => {
+                        console.log('[Paywall] Retry tapped — re-fetching offerings');
+                        setRetrying(true);
+                        await checkSubscription();
+                        await refreshOfferings();
+                        setRetrying(false);
+                      }}
+                      disabled={retrying}
+                    >
+                      {retrying ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.retryButtonText}>Retry</Text>
+                      )}
+                    </TouchableOpacity>
+                  </>
                 )}
               </View>
             )}
@@ -782,6 +807,20 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.7)",
     fontSize: 13,
     textAlign: "center",
+  },
+  retryButton: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.25)",
+    alignItems: "center",
+    minWidth: 100,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "600",
   },
   bottomActions: {
     padding: 24,

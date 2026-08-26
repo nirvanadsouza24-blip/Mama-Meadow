@@ -73,6 +73,8 @@ interface SubscriptionContextType {
   restorePurchases: () => Promise<boolean>;
   /** Manually re-check subscription status */
   checkSubscription: () => Promise<void>;
+  /** Re-fetch offerings from RevenueCat (useful for retry on empty packages) */
+  refreshOfferings: () => Promise<void>;
   /** Mock a successful purchase on web (preview only) - sets isSubscribed to true */
   mockWebPurchase: () => void;
   /** Dev-only: simulate a purchase in Expo Go — persists across reloads via expo-secure-store */
@@ -219,16 +221,34 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   const fetchOfferings = async () => {
     if (isWeb) return;
     try {
+      console.log("[RevenueCat] Fetching offerings...");
       const fetchedOfferings = await Purchases.getOfferings();
       setOfferings(fetchedOfferings);
 
       if (fetchedOfferings.current) {
+        console.log("[RevenueCat] Using current offering:", fetchedOfferings.current.identifier, "— packages:", fetchedOfferings.current.availablePackages.length);
         setCurrentOffering(fetchedOfferings.current);
         setPackages(fetchedOfferings.current.availablePackages);
+      } else {
+        // Fallback: try the first available offering
+        const allOfferings = Object.values(fetchedOfferings.all || {});
+        console.log("[RevenueCat] No current offering. All offerings count:", allOfferings.length);
+        if (allOfferings.length > 0) {
+          console.log("[RevenueCat] Falling back to first offering:", allOfferings[0].identifier, "— packages:", allOfferings[0].availablePackages.length);
+          setCurrentOffering(allOfferings[0]);
+          setPackages(allOfferings[0].availablePackages);
+        } else {
+          console.warn("[RevenueCat] No offerings found at all. Check RevenueCat dashboard configuration.");
+        }
       }
     } catch (error) {
       console.error("[RevenueCat] Failed to fetch offerings:", error);
     }
+  };
+
+  const refreshOfferings = async () => {
+    console.log("[RevenueCat] refreshOfferings called");
+    await fetchOfferings();
   };
 
   const checkSubscription = async () => {
@@ -328,6 +348,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         purchasePackage,
         restorePurchases,
         checkSubscription,
+        refreshOfferings,
         mockWebPurchase,
         mockNativePurchase,
       }}
