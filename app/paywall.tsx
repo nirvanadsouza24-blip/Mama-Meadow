@@ -430,6 +430,27 @@ export default function PaywallScreen() {
             {/* Web: mock test-store flow that mirrors Expo Go behavior */}
             {isWeb ? (
               <>
+                {/* Prominent Privacy Policy + Terms of Use links — required by App Store Guideline 3.1.2(c) */}
+                <View style={styles.prominentLinksRow}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      console.log('[Paywall] Privacy Policy link tapped (web)');
+                      Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/privacy");
+                    }}
+                  >
+                    <Text style={styles.prominentLinkText}>Privacy Policy</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.prominentLinkSeparator}>·</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      console.log('[Paywall] Terms of Use link tapped (web)');
+                      Linking.openURL("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/");
+                    }}
+                  >
+                    <Text style={styles.prominentLinkText}>Terms of Use</Text>
+                  </TouchableOpacity>
+                </View>
+
                 <TouchableOpacity
                   style={[
                     styles.primaryButton,
@@ -475,7 +496,7 @@ export default function PaywallScreen() {
                   {" · "}
                   <Text
                     style={styles.legalLink}
-                    onPress={() => Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/terms")}
+                    onPress={() => Linking.openURL("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")}
                   >
                     Terms of Use
                   </Text>
@@ -483,6 +504,27 @@ export default function PaywallScreen() {
               </>
             ) : (
               <>
+                {/* Prominent Privacy Policy + Terms of Use links — required by App Store Guideline 3.1.2(c) */}
+                <View style={styles.prominentLinksRow}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      console.log('[Paywall] Privacy Policy link tapped');
+                      Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/privacy");
+                    }}
+                  >
+                    <Text style={styles.prominentLinkText}>Privacy Policy</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.prominentLinkSeparator}>·</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      console.log('[Paywall] Terms of Use link tapped');
+                      Linking.openURL("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/");
+                    }}
+                  >
+                    <Text style={styles.prominentLinkText}>Terms of Use</Text>
+                  </TouchableOpacity>
+                </View>
+
                 {/* Native: Subscribe Button */}
                 <TouchableOpacity
                   style={[
@@ -533,7 +575,7 @@ export default function PaywallScreen() {
                   {" · "}
                   <Text
                     style={styles.legalLink}
-                    onPress={() => Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/terms")}
+                    onPress={() => Linking.openURL("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")}
                   >
                     Terms of Use
                   </Text>
@@ -827,6 +869,23 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     gap: 12,
     width: "100%",
+  },
+  prominentLinksRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 4,
+  },
+  prominentLinkText: {
+    fontSize: 14,
+    color: "#fff",
+    textDecorationLine: "underline",
+    fontWeight: "500",
+  },
+  prominentLinkSeparator: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.7)",
   },
   primaryButton: {
     backgroundColor: "#fff",
