@@ -79,6 +79,8 @@ interface SubscriptionContextType {
   mockWebPurchase: () => void;
   /** Dev-only: simulate a purchase in Expo Go — persists across reloads via expo-secure-store */
   mockNativePurchase: () => Promise<void>;
+  /** Number of times refreshOfferings has been called — increments on each retry so paywall can re-render */
+  retryCount: number;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(
@@ -96,6 +98,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     useState<PurchasesOffering | null>(null);
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
 
     // Fetch offerings via REST API for web platform
   const fetchOfferingsViaRest = async () => {
@@ -182,6 +185,10 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
 
         await Purchases.configure({ apiKey });
 
+        // Give Apple's sandbox StoreKit a moment after configure() before requesting products.
+        // Without this delay, getOfferings() can return empty results in the sandbox environment.
+        await new Promise<void>((r) => setTimeout(r, 500));
+
         // Listen for real-time subscription changes (e.g., purchase from another device)
         customerInfoListener = Purchases.addCustomerInfoUpdateListener(
           (customerInfo) => {
@@ -220,58 +227,113 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
 
   const fetchOfferings = async () => {
     if (isWeb) return;
-    try {
-      console.log("[RevenueCat] Fetching offerings...");
-      const fetchedOfferings = await Purchases.getOfferings();
-      setOfferings(fetchedOfferings);
 
-      if (fetchedOfferings.current) {
-        console.log("[RevenueCat] Using current offering:", fetchedOfferings.current.identifier, "— packages:", fetchedOfferings.current.availablePackages.length);
-        setCurrentOffering(fetchedOfferings.current);
-        setPackages(fetchedOfferings.current.availablePackages);
-      } else {
-        // Fallback: try the first available offering
+    const MAX_ATTEMPTS = 3;
+    const BACKOFF_MS = [1000, 2000, 4000];
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        console.log(`[RevenueCat] fetchOfferings attempt ${attempt}/${MAX_ATTEMPTS}`);
+        const fetchedOfferings = await Purchases.getOfferings();
+        setOfferings(fetchedOfferings);
+
+        // Determine if we got usable packages
+        const currentPkgs = fetchedOfferings.current?.availablePackages ?? [];
         const allOfferings = Object.values(fetchedOfferings.all || {});
-        console.log("[RevenueCat] No current offering. All offerings count:", allOfferings.length);
-        if (allOfferings.length > 0) {
-          console.log("[RevenueCat] Falling back to first offering:", allOfferings[0].identifier, "— packages:", allOfferings[0].availablePackages.length);
+        const fallbackPkgs = allOfferings.length > 0 ? allOfferings[0].availablePackages : [];
+        const hasPackages = currentPkgs.length > 0 || fallbackPkgs.length > 0;
+
+        if (fetchedOfferings.current) {
+          console.log(
+            "[RevenueCat] Using current offering:",
+            fetchedOfferings.current.identifier,
+            "— packages:",
+            fetchedOfferings.current.availablePackages.length
+          );
+          setCurrentOffering(fetchedOfferings.current);
+          setPackages(fetchedOfferings.current.availablePackages);
+        } else if (allOfferings.length > 0) {
+          console.log(
+            "[RevenueCat] No current offering. Falling back to first offering:",
+            allOfferings[0].identifier,
+            "— packages:",
+            allOfferings[0].availablePackages.length
+          );
           setCurrentOffering(allOfferings[0]);
           setPackages(allOfferings[0].availablePackages);
         } else {
-          console.warn("[RevenueCat] No offerings found at all. Check RevenueCat dashboard configuration.");
+          console.warn(
+            `[RevenueCat] fetchOfferings attempt ${attempt}/${MAX_ATTEMPTS}: no offerings found.`
+          );
+        }
+
+        // If we got packages, we're done — no need to retry
+        if (hasPackages) {
+          return;
+        }
+
+        // No packages found — retry if attempts remain
+        if (attempt < MAX_ATTEMPTS) {
+          const delay = BACKOFF_MS[attempt - 1];
+          console.log(`[RevenueCat] No packages yet, retrying in ${delay}ms...`);
+          await new Promise<void>((r) => setTimeout(r, delay));
+        } else {
+          console.warn("[RevenueCat] No offerings found after all attempts. Check RevenueCat dashboard configuration.");
+        }
+      } catch (error) {
+        console.error(`[RevenueCat] fetchOfferings attempt ${attempt}/${MAX_ATTEMPTS} failed:`, error);
+        if (attempt < MAX_ATTEMPTS) {
+          const delay = BACKOFF_MS[attempt - 1];
+          console.log(`[RevenueCat] Retrying fetchOfferings in ${delay}ms...`);
+          await new Promise<void>((r) => setTimeout(r, delay));
         }
       }
-    } catch (error) {
-      console.error("[RevenueCat] Failed to fetch offerings:", error);
     }
   };
 
   const refreshOfferings = async () => {
     console.log("[RevenueCat] refreshOfferings called");
+    setRetryCount((prev) => prev + 1);
     await fetchOfferings();
   };
 
   const checkSubscription = async () => {
     if (isWeb) return;
-    try {
-      const customerInfo = await Purchases.getCustomerInfo();
-      const hasEntitlement =
-        typeof customerInfo.entitlements.active[ENTITLEMENT_ID] !== "undefined";
-      // In __DEV__: RC test store purchases don't survive configure(), so only update state
-      // positively — mock/test purchase state persists across reloads via SecureStore cache.
-      if (hasEntitlement || !__DEV__) {
-        setIsSubscribed(hasEntitlement);
+
+    const MAX_ATTEMPTS = 3; // initial attempt + 2 retries
+    const RETRY_DELAY_MS = 1000;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const customerInfo = await Purchases.getCustomerInfo();
+        const hasEntitlement =
+          typeof customerInfo.entitlements.active[ENTITLEMENT_ID] !== "undefined";
+        // In __DEV__: RC test store purchases don't survive configure(), so only update state
+        // positively — mock/test purchase state persists across reloads via SecureStore cache.
+        if (hasEntitlement || !__DEV__) {
+          setIsSubscribed(hasEntitlement);
+        }
+        if (hasEntitlement) {
+          await SecureStore.setItemAsync(NATIVE_PURCHASE_KEY, "true").catch(() => {});
+        } else if (!__DEV__) {
+          await SecureStore.setItemAsync(NATIVE_PURCHASE_KEY, "false").catch(() => {});
+        }
+        // Success — exit retry loop
+        return;
+      } catch (error) {
+        if (attempt < MAX_ATTEMPTS) {
+          console.warn(
+            `[RevenueCat] checkSubscription attempt ${attempt}/${MAX_ATTEMPTS} failed, retrying in ${RETRY_DELAY_MS}ms:`,
+            error
+          );
+          await new Promise<void>((r) => setTimeout(r, RETRY_DELAY_MS));
+        } else {
+          console.error("[RevenueCat] Failed to check subscription after all attempts:", error);
+          // Don't reset isSubscribed on error — the customerInfoUpdateListener
+          // already set it from local cache after configure(). Overriding with false
+          // would incorrectly show the paywall to subscribed users on network errors.
+        }
       }
-      if (hasEntitlement) {
-        await SecureStore.setItemAsync(NATIVE_PURCHASE_KEY, "true").catch(() => {});
-      } else if (!__DEV__) {
-        await SecureStore.setItemAsync(NATIVE_PURCHASE_KEY, "false").catch(() => {});
-      }
-    } catch (error) {
-      console.error("[RevenueCat] Failed to check subscription:", error);
-      // Don't reset isSubscribed on error — the customerInfoUpdateListener
-      // already set it from local cache after configure(). Overriding with false
-      // would incorrectly show the paywall to subscribed users on network errors.
     }
   };
 
@@ -281,6 +343,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       return false;
     }
     try {
+      console.log("[RevenueCat] purchasePackage:", pkg.identifier);
       const { customerInfo } = await Purchases.purchasePackage(pkg);
       const hasEntitlement =
         typeof customerInfo.entitlements.active[ENTITLEMENT_ID] !== "undefined";
@@ -305,6 +368,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       return false;
     }
     try {
+      console.log("[RevenueCat] restorePurchases called");
       const customerInfo = await Purchases.restorePurchases();
       const hasEntitlement =
         typeof customerInfo.entitlements.active[ENTITLEMENT_ID] !== "undefined";
@@ -351,6 +415,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         refreshOfferings,
         mockWebPurchase,
         mockNativePurchase,
+        retryCount,
       }}
     >
       {children}
