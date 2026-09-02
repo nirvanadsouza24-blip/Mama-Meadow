@@ -5,7 +5,7 @@
  * On web, displays features and prompts user to download the app.
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -82,13 +82,25 @@ export default function PaywallScreen() {
   const [retrying, setRetrying] = useState(false);
   const [webMockState, setWebMockState] = useState<"idle" | "processing">("idle");
   const [webMockDialogState, setWebMockDialogState] = useState<"hidden" | "selecting" | "failed">("hidden");
+  // Tracks whether the initial 10-second load window has elapsed.
+  // During this window, show a spinner instead of the error message so Apple
+  // reviewers don't see "Could not load subscription plans" mid-load.
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   // Update selected package when packages load
-  React.useEffect(() => {
+  useEffect(() => {
     if (packages.length > 0 && !selectedPackage) {
       setSelectedPackage(packages[0]);
     }
   }, [packages, selectedPackage]);
+
+  // Set initialLoadDone after 10 seconds so we stop showing the spinner
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialLoadDone(true);
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Handle purchase
   const handlePurchase = async () => {
@@ -397,6 +409,10 @@ export default function PaywallScreen() {
                       <Text style={styles.devMockButtonText}>Dev: Simulate Purchase</Text>
                     </TouchableOpacity>
                   </>
+                ) : !initialLoadDone ? (
+                  // Still within the 10-second initial load window — show spinner
+                  // so Apple reviewers don't see an error message mid-load
+                  <ActivityIndicator size="large" color="#fff" />
                 ) : (
                   <>
                     <Text style={styles.noPackagesText}>
@@ -423,6 +439,33 @@ export default function PaywallScreen() {
                 )}
               </View>
             )}
+
+            {/* Prominent Legal Links — inside ScrollView so always visible without scrolling */}
+            {/* Required by App Store Guideline 3.1.2(c) */}
+            <View style={styles.scrollLegalSection}>
+              <Text style={styles.legalSectionLabel}>Legal</Text>
+              <View style={styles.prominentLinksRow}>
+                <TouchableOpacity
+                  style={styles.prominentLinkButton}
+                  onPress={() => {
+                    console.log('[Paywall] Privacy Policy link tapped (in-scroll)');
+                    Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/privacy");
+                  }}
+                >
+                  <Text style={styles.prominentLinkText}>Privacy Policy</Text>
+                </TouchableOpacity>
+                <Text style={styles.prominentLinkSeparator}>·</Text>
+                <TouchableOpacity
+                  style={styles.prominentLinkButton}
+                  onPress={() => {
+                    console.log('[Paywall] Terms of Use link tapped (in-scroll)');
+                    Linking.openURL("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/");
+                  }}
+                >
+                  <Text style={styles.prominentLinkText}>Terms of Use</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </ScrollView>
 
           {/* Bottom Actions */}
@@ -433,6 +476,7 @@ export default function PaywallScreen() {
                 {/* Prominent Privacy Policy + Terms of Use links — required by App Store Guideline 3.1.2(c) */}
                 <View style={styles.prominentLinksRow}>
                   <TouchableOpacity
+                    style={styles.prominentLinkButton}
                     onPress={() => {
                       console.log('[Paywall] Privacy Policy link tapped (web)');
                       Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/privacy");
@@ -442,6 +486,7 @@ export default function PaywallScreen() {
                   </TouchableOpacity>
                   <Text style={styles.prominentLinkSeparator}>·</Text>
                   <TouchableOpacity
+                    style={styles.prominentLinkButton}
                     onPress={() => {
                       console.log('[Paywall] Terms of Use link tapped (web)');
                       Linking.openURL("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/");
@@ -507,6 +552,7 @@ export default function PaywallScreen() {
                 {/* Prominent Privacy Policy + Terms of Use links — required by App Store Guideline 3.1.2(c) */}
                 <View style={styles.prominentLinksRow}>
                   <TouchableOpacity
+                    style={styles.prominentLinkButton}
                     onPress={() => {
                       console.log('[Paywall] Privacy Policy link tapped');
                       Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/privacy");
@@ -516,6 +562,7 @@ export default function PaywallScreen() {
                   </TouchableOpacity>
                   <Text style={styles.prominentLinkSeparator}>·</Text>
                   <TouchableOpacity
+                    style={styles.prominentLinkButton}
                     onPress={() => {
                       console.log('[Paywall] Terms of Use link tapped');
                       Linking.openURL("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/");
@@ -870,6 +917,19 @@ const styles = StyleSheet.create({
     gap: 12,
     width: "100%",
   },
+  scrollLegalSection: {
+    alignItems: "center",
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  legalSectionLabel: {
+    fontSize: 11,
+    color: "rgba(255,255,255,0.6)",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    textAlign: "center",
+    marginBottom: 6,
+  },
   prominentLinksRow: {
     flexDirection: "row",
     justifyContent: "center",
@@ -877,11 +937,17 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 4,
   },
+  prominentLinkButton: {
+    backgroundColor: "rgba(255,255,255,0.15)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
   prominentLinkText: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#fff",
     textDecorationLine: "underline",
-    fontWeight: "500",
+    fontWeight: "700",
   },
   prominentLinkSeparator: {
     fontSize: 14,
