@@ -607,6 +607,17 @@ export default function PaywallScreen() {
                   )}
                 </TouchableOpacity>
 
+                {/* Maybe Later — native only, for App Store screenshots */}
+                <TouchableOpacity
+                  style={styles.maybeLaterButton}
+                  onPress={() => {
+                    console.log('[Paywall] Maybe Later tapped — skipping paywall');
+                    handleClose();
+                  }}
+                >
+                  <Text style={styles.maybeLaterText}>Maybe Later</Text>
+                </TouchableOpacity>
+
                 {/* Legal Text - Required by App Store */}
                 <Text style={styles.legalText}>
                   Payment will be charged to your{" "}
@@ -979,6 +990,14 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontSize: 16,
     color: "rgba(255, 255, 255, 0.9)",
+  },
+  maybeLaterButton: {
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  maybeLaterText: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.45)",
   },
   legalText: {
     fontSize: 11,
