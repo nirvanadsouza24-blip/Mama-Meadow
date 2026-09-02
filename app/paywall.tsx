@@ -24,6 +24,7 @@ import { useRouter } from "expo-router";
 import { PurchasesPackage } from "react-native-purchases";
 
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { setPaywallSkipped } from "./_layout";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -160,7 +161,8 @@ export default function PaywallScreen() {
   };
 
   const handleClose = () => {
-    console.log('[Paywall] Dismiss tapped — navigating to home');
+    console.log('[Paywall] Dismiss tapped — skipping paywall and navigating to home');
+    setPaywallSkipped(true);
     router.replace("/(tabs)/(home)");
   };
 

@@ -33,6 +33,10 @@ export const unstable_settings = {
   initialRouteName: "(tabs)", // Ensure any route can link back to `/`
 };
 
+let paywallSkipped = false;
+export function setPaywallSkipped(val: boolean) {
+  paywallSkipped = val;
+}
 
 function SubscriptionRedirect() {
   const { isSubscribed, loading } = useSubscription();
@@ -50,14 +54,14 @@ function SubscriptionRedirect() {
       if (!done) return;
       const onPaywall = pathname === "/paywall";
       if (onPaywall) return;
-      if (!isSubscribed) {
+      if (!isSubscribed && !paywallSkipped) {
         router.replace("/paywall");
       }
     }).catch(() => {
       if (cancelled) return;
       const onPaywall = pathname === "/paywall";
       if (onPaywall) return;
-      if (!isSubscribed) {
+      if (!isSubscribed && !paywallSkipped) {
         router.replace("/paywall");
       }
     });
