@@ -15,7 +15,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { usePremiumGate } from "@/hooks/usePremiumGate";
+import { supabase } from "@/app/integrations/supabase/client";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -31,75 +33,15 @@ const COLORS = {
   border: "rgba(44, 26, 14, 0.07)",
 };
 
-// ─── Response Engine ──────────────────────────────────────────────────────────
-const RESPONSES: { keywords: string[]; response: string }[] = [
-  {
-    keywords: ["tired", "exhausted", "sleep", "no sleep", "can't sleep", "sleepless"],
-    response:
-      "Oh Mama, sleep deprivation is one of the hardest parts of this journey — and it's real, it's brutal, and it's not your fault. 💛 Your body is working so hard. Try to rest whenever you can, even in small moments. Is there anyone who can take a shift so you can sleep? You deserve rest just as much as your baby does. 🌿",
-  },
-  {
-    keywords: ["sad", "cry", "crying", "tears", "down", "low", "depressed", "depression", "hopeless"],
-    response:
-      "I hear you, and I want you to know — what you're feeling is valid. 💜 So many mothers feel this way and feel alone in it. If these feelings are lasting more than two weeks or feel overwhelming, please reach out to your doctor or midwife. You are not broken. You are not failing. You are a mother going through something incredibly hard. You are not alone. 🌸",
-  },
-  {
-    keywords: ["anxious", "anxiety", "worried", "worry", "scared", "fear", "panic", "overwhelmed"],
-    response:
-      "Anxiety after birth is so common, and it makes sense — you're responsible for a tiny human and everything feels high-stakes. 🌿 Take a slow breath with me: in for 4 counts, hold for 4, out for 4. You are safe. Your baby is safe. One moment at a time. If the anxiety feels unmanageable, please talk to your doctor — there is help available and you deserve it. 💛",
-  },
-  {
-    keywords: ["breastfeed", "nursing", "latch", "milk", "supply", "nipple", "pump"],
-    response:
-      "Breastfeeding is beautiful AND incredibly hard — anyone who says otherwise hasn't done it! 🤱 Whether you're struggling with latch, supply, or just exhaustion from feeding around the clock — you are doing amazingly. A lactation consultant can be a game-changer if you're struggling. And remember: fed is best. However you feed your baby, you are a wonderful mother. 🌸",
-  },
-  {
-    keywords: ["hair", "hair loss", "losing hair", "bald", "shedding"],
-    response:
-      "Oh, the hair loss! It's such a shock, isn't it? 💇‍♀️ Around 3–6 months postpartum, many mamas lose a lot of hair — it's called postpartum alopecia and it's completely normal. Your oestrogen dropped after birth and all that 'extra' pregnancy hair is shedding. It WILL grow back, I promise. Be gentle with your hair — wide-tooth comb, gentle shampoo, and biotin-rich foods like eggs and nuts can help. You're still beautiful. 🌿",
-  },
-  {
-    keywords: ["body", "weight", "fat", "ugly", "hate my body", "look", "appearance", "stretch marks"],
-    response:
-      "Mama, your body grew and birthed a human being. That is extraordinary. 🌸 The 'bounce back' culture is a lie — your body deserves reverence, not criticism. Stretch marks are maps of the miracle you created. Softness is evidence of the life you nurtured. Please be as kind to your body as you would be to your best friend. You are beautiful, exactly as you are. 💛",
-  },
-  {
-    keywords: ["partner", "husband", "relationship", "alone", "lonely", "support", "help"],
-    response:
-      "Feeling unsupported or lonely is one of the most painful parts of new motherhood. 💜 You shouldn't have to do this alone. It's okay to tell your partner exactly what you need — sometimes they genuinely don't know. And if you don't have that support, please know there are communities of mothers who understand. You deserve a village. 🌿",
-  },
-  {
-    keywords: ["happy", "good", "great", "wonderful", "amazing", "love", "grateful", "joy", "beautiful"],
-    response:
-      "Oh, this makes my heart so happy! 🌸 Hold onto this feeling, Mama. You are doing something incredible, and moments of joy are your reward. Your baby is so lucky to have someone who loves them the way you do. 💛 What's making you feel good today?",
-  },
-  {
-    keywords: ["guilty", "guilt", "bad mother", "failing", "failure", "not enough", "enough"],
-    response:
-      "Mama guilt is real, and it's one of the heaviest things a mother carries. 💜 But here's the truth: the fact that you care so deeply about being a good mother is proof that you already are one. Bad mothers don't worry about being bad mothers. You are enough. You have always been enough. 🌸",
-  },
-  {
-    keywords: ["pain", "hurt", "sore", "healing", "recovery", "stitches", "c-section", "caesarean"],
-    response:
-      "Your body has been through so much, and healing takes time. 🌿 Please be patient with yourself — you just did something extraordinary. Make sure you're resting as much as possible, eating nourishing food, and accepting help when it's offered. If you're in significant pain, please don't hesitate to contact your doctor or midwife. You deserve to heal well. 💛",
-  },
-  {
-    keywords: ["hello", "hi", "hey", "hiya", "howdy"],
-    response:
-      "Hello, beautiful Mama! 🌸 I'm so glad you're here. How are you feeling today? Remember, this is your safe space — you can share anything with me. 💛",
-  },
-  {
-    keywords: ["thank", "thanks", "thank you"],
-    response:
-      "You are so welcome, Mama. 🌿 I'm always here for you. You're doing an incredible job, even on the days it doesn't feel like it. 💛",
-  },
-];
+const EDGE_FUNCTION_URL =
+  "https://fhewklzevapipjnygomq.supabase.co/functions/v1/mama-chat";
 
-const FALLBACK_RESPONSE =
-  "Thank you for sharing that with me, Mama. 🌸 Whatever you're going through, you don't have to face it alone. I'm here, and I'm listening. Can you tell me a little more about how you're feeling? 💛";
+const DEVICE_ID_KEY = "mama_meadow_device_id";
 
 const OPENING_MESSAGE =
   "Hey Mama 🌸 I'm here for you. How are you feeling today? You can tell me anything — I'm listening with my whole heart. 💛";
+
+const WELCOME_BACK_MESSAGE = "Welcome back, Mama 🌸";
 
 const QUICK_REPLIES = [
   "I'm exhausted 😴",
@@ -108,14 +50,21 @@ const QUICK_REPLIES = [
   "I'm struggling 💜",
 ];
 
-function getResponse(text: string): string {
-  const lower = text.toLowerCase();
-  for (const entry of RESPONSES) {
-    if (entry.keywords.some((kw) => lower.includes(kw))) {
-      return entry.response;
-    }
+const ERROR_REPLY =
+  "I'm having a little trouble right now, please try again 🌸";
+
+// ─── Device ID ────────────────────────────────────────────────────────────────
+async function getOrCreateDeviceId(): Promise<string> {
+  let id = await AsyncStorage.getItem(DEVICE_ID_KEY);
+  if (!id) {
+    id =
+      "device_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
+    await AsyncStorage.setItem(DEVICE_ID_KEY, id);
+    console.log("[MamaChat] Created new device_id:", id);
+  } else {
+    console.log("[MamaChat] Loaded existing device_id:", id);
   }
-  return FALLBACK_RESPONSE;
+  return id;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -167,6 +116,15 @@ function TypingIndicator() {
           />
         ))}
       </View>
+    </View>
+  );
+}
+
+// ─── System Note ──────────────────────────────────────────────────────────────
+function SystemNote({ text }: { text: string }) {
+  return (
+    <View style={styles.systemNoteWrap}>
+      <Text style={styles.systemNoteText}>{text}</Text>
     </View>
   );
 }
@@ -266,17 +224,13 @@ export default function MamaChatScreen() {
   const router = useRouter();
   const { isSubscribed, loading } = usePremiumGate();
   const scrollRef = useRef<ScrollView>(null);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "opening",
-      role: "app",
-      text: OPENING_MESSAGE,
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [quickRepliesUsed, setQuickRepliesUsed] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [showWelcomeBack, setShowWelcomeBack] = useState(false);
+  const deviceIdRef = useRef<string | null>(null);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
@@ -284,10 +238,67 @@ export default function MamaChatScreen() {
     }, 100);
   }, []);
 
+  // ─── Load history on mount ───────────────────────────────────────────────
+  useEffect(() => {
+    async function init() {
+      console.log("[MamaChat] Initializing — loading device_id and chat history");
+      const deviceId = await getOrCreateDeviceId();
+      deviceIdRef.current = deviceId;
+
+      console.log("[MamaChat] Fetching chat history from Supabase for device_id:", deviceId);
+      const { data, error } = await supabase
+        .from("chat_messages")
+        .select("*")
+        .eq("device_id", deviceId)
+        .order("created_at", { ascending: true })
+        .limit(50);
+
+      if (error) {
+        console.log("[MamaChat] Error loading chat history:", error.message);
+      }
+
+      if (data && data.length > 0) {
+        console.log("[MamaChat] Loaded", data.length, "previous messages");
+        const loaded: Message[] = data.map((row) => ({
+          id: row.id,
+          role: row.role === "assistant" ? "app" : "user",
+          text: row.content,
+          timestamp: new Date(row.created_at),
+        }));
+        setMessages(loaded);
+        setShowWelcomeBack(true);
+        setQuickRepliesUsed(true);
+      } else {
+        console.log("[MamaChat] No previous messages — showing opening message");
+        setMessages([
+          {
+            id: "opening",
+            role: "app",
+            text: OPENING_MESSAGE,
+            timestamp: new Date(),
+          },
+        ]);
+        setShowWelcomeBack(false);
+      }
+
+      setIsLoadingHistory(false);
+    }
+
+    init();
+  }, []);
+
+  // ─── Send message to edge function ──────────────────────────────────────
   const sendMessage = useCallback(
-    (text: string) => {
+    async (text: string) => {
       const trimmed = text.trim();
       if (!trimmed) return;
+
+      const deviceId = deviceIdRef.current;
+      if (!deviceId) {
+        console.log("[MamaChat] Device ID not ready yet, aborting send");
+        return;
+      }
+
       console.log("[MamaChat] User sent message:", trimmed);
 
       const userMsg: Message = {
@@ -301,19 +312,43 @@ export default function MamaChatScreen() {
       setIsTyping(true);
       scrollToBottom();
 
-      setTimeout(() => {
-        const response = getResponse(trimmed);
-        console.log("[MamaChat] App responding with matched response");
+      console.log("[MamaChat] POST", EDGE_FUNCTION_URL, "device_id:", deviceId);
+      try {
+        const response = await fetch(EDGE_FUNCTION_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ device_id: deviceId, message: trimmed }),
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          console.log("[MamaChat] Edge function error", response.status, errText);
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const json = await response.json();
+        console.log("[MamaChat] AI reply received, message_id:", json.message_id);
+
         const appMsg: Message = {
-          id: `app_${Date.now()}`,
+          id: json.message_id ?? `app_${Date.now()}`,
           role: "app",
-          text: response,
+          text: json.reply,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, appMsg]);
+      } catch (err) {
+        console.log("[MamaChat] Failed to get AI response:", err);
+        const errorMsg: Message = {
+          id: `error_${Date.now()}`,
+          role: "app",
+          text: ERROR_REPLY,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorMsg]);
+      } finally {
         setIsTyping(false);
         scrollToBottom();
-      }, 1200);
+      }
     },
     [scrollToBottom]
   );
@@ -337,7 +372,7 @@ export default function MamaChatScreen() {
     router.back();
   };
 
-  if (loading) {
+  if (loading || isLoadingHistory) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FAF7F2" }}>
         <ActivityIndicator size="large" color="#4A7C59" />
@@ -387,6 +422,8 @@ export default function MamaChatScreen() {
             showsVerticalScrollIndicator={false}
             onContentSizeChange={scrollToBottom}
           >
+            {showWelcomeBack && <SystemNote text={WELCOME_BACK_MESSAGE} />}
+
             {messages.map((msg) => (
               <MessageBubble key={msg.id} message={msg} />
             ))}
@@ -513,6 +550,22 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
     gap: 12,
+  },
+
+  // System note
+  systemNoteWrap: {
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  systemNoteText: {
+    fontSize: 12,
+    fontFamily: "Karla_400Regular",
+    color: COLORS.textTertiary,
+    backgroundColor: "rgba(200, 149, 108, 0.10)",
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 12,
+    overflow: "hidden",
   },
 
   // User message
