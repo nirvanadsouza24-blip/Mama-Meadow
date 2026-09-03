@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   Modal,
   View,
@@ -7,7 +7,6 @@ import {
   Pressable,
   TextInput,
   ScrollView,
-  Animated,
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
@@ -33,13 +32,7 @@ const COLORS = {
   accentBorder: "rgba(200,149,108,0.2)",
 };
 
-type EventTypeOption = {
-  type: string;
-  emoji: string;
-  label: string;
-};
-
-const EVENT_TYPE_OPTIONS: EventTypeOption[] = [
+const EVENT_TYPE_OPTIONS = [
   { type: "milestone", emoji: "🌸", label: "Milestone" },
   { type: "memory", emoji: "🦋", label: "Memory" },
   { type: "mood_happy", emoji: "🌻", label: "Happy Moment" },
@@ -56,28 +49,13 @@ interface Props {
 
 export function AddMeadowEventModal({ visible, onClose, onSaved }: Props) {
   const { babies } = useBabies();
-  const slideAnim = useRef(new Animated.Value(80)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
 
-  const [selectedType, setSelectedType] = useState<string>("memory");
+  const [selectedType, setSelectedType] = useState("memory");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [howMamaFelt, setHowMamaFelt] = useState("");
   const [titleError, setTitleError] = useState("");
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (visible) {
-      console.log("[AddMeadowEventModal] Modal opened");
-      Animated.parallel([
-        Animated.timing(slideAnim, { toValue: 0, duration: 340, useNativeDriver: true }),
-        Animated.timing(opacityAnim, { toValue: 1, duration: 280, useNativeDriver: true }),
-      ]).start();
-    } else {
-      slideAnim.setValue(80);
-      opacityAnim.setValue(0);
-    }
-  }, [visible]);
 
   const resetForm = useCallback(() => {
     setSelectedType("memory");
@@ -90,6 +68,7 @@ export function AddMeadowEventModal({ visible, onClose, onSaved }: Props) {
 
   const handleClose = useCallback(() => {
     console.log("[AddMeadowEventModal] Cancel / close pressed");
+    Keyboard.dismiss();
     resetForm();
     onClose();
   }, [onClose, resetForm]);
@@ -101,13 +80,11 @@ export function AddMeadowEventModal({ visible, onClose, onSaved }: Props) {
       setTitleError("Please enter a title");
       return;
     }
-
     setSaving(true);
     try {
       const deviceId = await AsyncStorage.getItem("mama_meadow_device_id");
       const babyId = babies[0]?.id ?? null;
       const today = new Date().toISOString().split("T")[0];
-
       const selectedOption = EVENT_TYPE_OPTIONS.find((o) => o.type === selectedType);
       const emoji = selectedOption?.emoji ?? "🌼";
 
@@ -145,7 +122,6 @@ export function AddMeadowEventModal({ visible, onClose, onSaved }: Props) {
 
       console.log("[AddMeadowEventModal] meadow_event inserted successfully", { id: (eventData as any)?.id });
 
-      // Also insert into meadow_memories
       if (title.trim()) {
         console.log("[AddMeadowEventModal] Inserting meadow_memory to Supabase", { event_id: (eventData as any)?.id });
         const { error: memError } = await (supabase as any).from("meadow_memories").insert({
@@ -177,156 +153,146 @@ export function AddMeadowEventModal({ visible, onClose, onSaved }: Props) {
   return (
     <Modal
       visible={visible}
-      animationType="none"
-      transparent
+      animationType="slide"
+      transparent={true}
       onRequestClose={handleClose}
+      statusBarTranslucent
     >
+      <TouchableWithoutFeedback onPress={handleClose}>
+        <View style={styles.backdrop} />
+      </TouchableWithoutFeedback>
+
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={styles.kavContainer}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
       >
-        <Animated.View style={[styles.overlay, { opacity: opacityAnim }]} pointerEvents="box-none">
-          <TouchableWithoutFeedback onPress={() => { Keyboard.dismiss(); handleClose(); }}>
-            <View style={styles.overlayTouchable} />
-          </TouchableWithoutFeedback>
-          <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
-            {/* Handle */}
-            <View style={styles.handle} />
+        <View style={styles.sheet}>
+          <View style={styles.handle} />
+          <Text style={styles.sheetTitle}>Add to Your Meadow 🌸</Text>
 
-            <Text style={styles.sheetTitle}>Add to Your Meadow 🌸</Text>
-
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            bounces={false}
+          >
+            <Text style={styles.fieldLabel}>What kind of moment?</Text>
             <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.scrollContent}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.typePickerRow}
               keyboardShouldPersistTaps="handled"
-              style={styles.scrollView}
-              bounces={false}
             >
-              {/* Event type picker */}
-              <Text style={styles.fieldLabel}>What kind of moment?</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.typePickerRow}
-              >
-                {EVENT_TYPE_OPTIONS.map((opt) => {
-                  const isSelected = selectedType === opt.type;
-                  return (
-                    <Pressable
-                      key={opt.type}
-                      style={[styles.typeChip, isSelected && styles.typeChipSelected]}
-                      onPress={() => {
-                        console.log("[AddMeadowEventModal] Event type selected", { type: opt.type });
-                        setSelectedType(opt.type);
-                      }}
-                    >
-                      <Text style={styles.typeChipEmoji}>{opt.emoji}</Text>
-                      <Text style={[styles.typeChipLabel, isSelected && styles.typeChipLabelSelected]}>
-                        {opt.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-
-              {/* Title */}
-              <Text style={styles.fieldLabel}>
-                Title <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={[styles.input, titleError ? styles.inputError : null]}
-                placeholder="e.g. First smile, Said 'mama'…"
-                placeholderTextColor={COLORS.textTertiary}
-                value={title}
-                onChangeText={(t) => {
-                  setTitle(t);
-                  if (titleError) setTitleError("");
-                }}
-                returnKeyType="next"
-                autoCapitalize="sentences"
-              />
-              {titleError !== "" && (
-                <Text style={styles.errorText}>{titleError}</Text>
-              )}
-
-              {/* Description */}
-              <Text style={styles.fieldLabel}>What happened? (optional)</Text>
-              <TextInput
-                style={[styles.input, styles.inputMultiline]}
-                placeholder="Describe this beautiful moment…"
-                placeholderTextColor={COLORS.textTertiary}
-                value={description}
-                onChangeText={setDescription}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-                returnKeyType="next"
-                autoCapitalize="sentences"
-              />
-
-              {/* How Mama felt */}
-              <Text style={styles.fieldLabel}>How did Mama feel? (optional)</Text>
-              <TextInput
-                style={[styles.input, styles.inputMultiline]}
-                placeholder="Overwhelmed with love, grateful, tired but happy…"
-                placeholderTextColor={COLORS.textTertiary}
-                value={howMamaFelt}
-                onChangeText={setHowMamaFelt}
-                multiline
-                numberOfLines={2}
-                textAlignVertical="top"
-                returnKeyType="done"
-                autoCapitalize="sentences"
-              />
-
-              {/* Date note */}
-              <Text style={styles.dateNote}>📅  Saving for today</Text>
-
-              {/* Save button */}
-              <Pressable
-                style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-                onPress={handleSave}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.saveButtonText}>Save to Meadow 🌱</Text>
-                )}
-              </Pressable>
-
-              <Pressable style={styles.cancelButton} onPress={handleClose}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </Pressable>
+              {EVENT_TYPE_OPTIONS.map((opt) => {
+                const isSelected = selectedType === opt.type;
+                return (
+                  <Pressable
+                    key={opt.type}
+                    style={[styles.typeChip, isSelected && styles.typeChipSelected]}
+                    onPress={() => {
+                      console.log("[AddMeadowEventModal] Event type selected", { type: opt.type });
+                      setSelectedType(opt.type);
+                    }}
+                  >
+                    <Text style={styles.typeChipEmoji}>{opt.emoji}</Text>
+                    <Text style={[styles.typeChipLabel, isSelected && styles.typeChipLabelSelected]}>
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </ScrollView>
-          </Animated.View>
-        </Animated.View>
+
+            <Text style={styles.fieldLabel}>
+              Title <Text style={styles.required}>*</Text>
+            </Text>
+            <TextInput
+              style={[styles.input, titleError ? styles.inputError : null]}
+              placeholder="e.g. First smile, Said 'mama'…"
+              placeholderTextColor={COLORS.textTertiary}
+              value={title}
+              onChangeText={(t) => { setTitle(t); if (titleError) setTitleError(""); }}
+              returnKeyType="next"
+              autoCapitalize="sentences"
+            />
+            {titleError !== "" && <Text style={styles.errorText}>{titleError}</Text>}
+
+            <Text style={styles.fieldLabel}>What happened? (optional)</Text>
+            <TextInput
+              style={[styles.input, styles.inputMultiline]}
+              placeholder="Describe this beautiful moment…"
+              placeholderTextColor={COLORS.textTertiary}
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+              returnKeyType="next"
+              autoCapitalize="sentences"
+            />
+
+            <Text style={styles.fieldLabel}>How did Mama feel? (optional)</Text>
+            <TextInput
+              style={[styles.input, styles.inputMultiline]}
+              placeholder="Overwhelmed with love, grateful, tired but happy…"
+              placeholderTextColor={COLORS.textTertiary}
+              value={howMamaFelt}
+              onChangeText={setHowMamaFelt}
+              multiline
+              numberOfLines={2}
+              textAlignVertical="top"
+              returnKeyType="done"
+              autoCapitalize="sentences"
+            />
+
+            <Text style={styles.dateNote}>📅  Saving for today</Text>
+
+            <Pressable
+              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.saveButtonText}>Save to Meadow 🌱</Text>
+              )}
+            </Pressable>
+
+            <Pressable style={styles.cancelButton} onPress={handleClose}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </Pressable>
+          </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
+  backdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  kavContainer: {
+    flex: 1,
     justifyContent: "flex-end",
   },
-  overlayTouchable: {
-    ...StyleSheet.absoluteFillObject,
-  },
   sheet: {
-    backgroundColor: COLORS.cream,
+    backgroundColor: "#FFF8F0",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    maxHeight: "90%",
+    maxHeight: "92%",
     paddingTop: 12,
-    paddingBottom: 0,
     borderWidth: 1,
-    borderColor: COLORS.accentBorder,
-  },
-  scrollView: {
-    flex: 1,
+    borderColor: "rgba(200,149,108,0.2)",
+    borderBottomWidth: 0,
   },
   handle: {
     width: 40,
@@ -340,27 +306,28 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontFamily: "Fraunces_700Bold",
     fontWeight: "700",
-    color: COLORS.text,
+    color: "#2C1A0E",
     letterSpacing: -0.2,
     paddingHorizontal: 24,
     marginBottom: 16,
   },
+  scrollView: {
+    flexGrow: 0,
+  },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingBottom: 60,
+    paddingBottom: 48,
   },
   fieldLabel: {
     fontSize: 13,
     fontFamily: "Karla_700Bold",
-    color: COLORS.textSecondary,
+    color: "#7A5C44",
     marginBottom: 8,
     marginTop: 4,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  required: {
-    color: COLORS.accent,
-  },
+  required: { color: "#C8956C" },
   typePickerRow: {
     gap: 8,
     paddingBottom: 16,
@@ -373,25 +340,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 20,
-    backgroundColor: COLORS.surface,
+    backgroundColor: "#FFFFFF",
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: "rgba(44, 26, 14, 0.07)",
   },
   typeChipSelected: {
-    backgroundColor: COLORS.primaryMuted,
-    borderColor: COLORS.primary,
+    backgroundColor: "rgba(74, 124, 89, 0.10)",
+    borderColor: "#4A7C59",
   },
-  typeChipEmoji: {
-    fontSize: 16,
-  },
+  typeChipEmoji: { fontSize: 16 },
   typeChipLabel: {
     fontSize: 13,
     fontFamily: "Karla_700Bold",
-    color: COLORS.textSecondary,
+    color: "#7A5C44",
   },
-  typeChipLabelSelected: {
-    color: COLORS.primary,
-  },
+  typeChipLabelSelected: { color: "#4A7C59" },
   input: {
     borderWidth: 1.5,
     borderColor: "rgba(44,26,14,0.10)",
@@ -399,47 +362,45 @@ const styles = StyleSheet.create({
     padding: 14,
     fontSize: 15,
     fontFamily: "Karla_400Regular",
-    color: COLORS.text,
+    color: "#2C1A0E",
     marginBottom: 16,
-    backgroundColor: COLORS.surface,
+    backgroundColor: "#FFFFFF",
   },
   inputMultiline: {
     minHeight: 80,
     paddingTop: 12,
   },
   inputError: {
-    borderColor: COLORS.accent,
+    borderColor: "#C8956C",
     marginBottom: 4,
   },
   errorText: {
     fontSize: 13,
     fontFamily: "Karla_400Regular",
-    color: COLORS.accent,
+    color: "#C8956C",
     marginBottom: 12,
   },
   dateNote: {
     fontSize: 13,
     fontFamily: "Karla_400Regular",
-    color: COLORS.textTertiary,
+    color: "#B89880",
     marginBottom: 20,
     textAlign: "center",
   },
   saveButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: "#4A7C59",
     borderRadius: 14,
     height: 52,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 12,
-    shadowColor: COLORS.primary,
+    shadowColor: "#4A7C59",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.22,
     shadowRadius: 8,
     elevation: 4,
   },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
+  saveButtonDisabled: { opacity: 0.6 },
   saveButtonText: {
     fontSize: 16,
     fontFamily: "Karla_700Bold",
@@ -453,6 +414,6 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: 15,
     fontFamily: "Karla_400Regular",
-    color: COLORS.textSecondary,
+    color: "#7A5C44",
   },
 });
