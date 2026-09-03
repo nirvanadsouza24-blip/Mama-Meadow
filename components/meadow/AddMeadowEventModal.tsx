@@ -181,14 +181,14 @@ export function AddMeadowEventModal({ visible, onClose, onSaved }: Props) {
       transparent
       onRequestClose={handleClose}
     >
-      <Animated.View style={[styles.overlay, { opacity: opacityAnim }]}>
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={styles.overlayTouchable} />
-        </TouchableWithoutFeedback>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.kav}
-        >
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <Animated.View style={[styles.overlay, { opacity: opacityAnim }]}>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.overlayTouchable} />
+          </TouchableWithoutFeedback>
           <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
             {/* Handle */}
             <View style={styles.handle} />
@@ -300,8 +300,8 @@ export function AddMeadowEventModal({ visible, onClose, onSaved }: Props) {
               </Pressable>
             </ScrollView>
           </Animated.View>
-        </KeyboardAvoidingView>
-      </Animated.View>
+        </Animated.View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -313,11 +313,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   overlayTouchable: {
-    flex: 1,
-  },
-  kav: {
-    flex: 1,
-    justifyContent: "flex-end",
+    ...StyleSheet.absoluteFillObject,
   },
   sheet: {
     backgroundColor: COLORS.cream,

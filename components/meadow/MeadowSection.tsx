@@ -92,7 +92,7 @@ function determineMood(events: MeadowEvent[]): "sunny" | "rainy" | "rainbow" {
   return "sunny";
 }
 
-function calculateMeadowAge(events: MeadowEvent[], babies: { dob: string }[]): number {
+function calculateMeadowAge(events: MeadowEvent[], babies: { born_at?: string; dob?: string }[]): number {
   const dates: Date[] = [];
   events.forEach((e) => {
     try {
@@ -100,9 +100,11 @@ function calculateMeadowAge(events: MeadowEvent[], babies: { dob: string }[]): n
     } catch {}
   });
   babies.forEach((b) => {
-    if (b.dob) {
+    const dateStr = b.born_at || b.dob;
+    if (dateStr) {
       try {
-        dates.push(new Date(b.dob));
+        const d = new Date(dateStr);
+        if (!isNaN(d.getTime())) dates.push(d);
       } catch {}
     }
   });

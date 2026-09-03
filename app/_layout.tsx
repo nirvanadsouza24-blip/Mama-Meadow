@@ -53,14 +53,16 @@ function SubscriptionRedirect() {
       if (cancelled) return;
       if (!done) return;
       const onPaywall = pathname === "/paywall";
-      if (onPaywall) return;
+      const onPrivacyPolicy = pathname === "/privacy-policy";
+      if (onPaywall || onPrivacyPolicy) return;
       if (!isSubscribed && !paywallSkipped) {
         router.replace("/paywall");
       }
     }).catch(() => {
       if (cancelled) return;
       const onPaywall = pathname === "/paywall";
-      if (onPaywall) return;
+      const onPrivacyPolicy = pathname === "/privacy-policy";
+      if (onPaywall || onPrivacyPolicy) return;
       if (!isSubscribed && !paywallSkipped) {
         router.replace("/paywall");
       }
