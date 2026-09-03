@@ -370,6 +370,7 @@ function MoodSelector({
   onSelectSound,
   onBegin,
   insets,
+  preloadProgress,
 }: {
   selectedMood: string;
   selectedSound: string;
@@ -377,7 +378,19 @@ function MoodSelector({
   onSelectSound: (s: string) => void;
   onBegin: () => void;
   insets: { top: number; bottom: number };
+  preloadProgress: number;
 }) {
+  const isSitWithMe = selectedMood === "SIT WITH ME";
+  const isReady = preloadProgress === 4 || isSitWithMe || !selectedMood;
+  const isPreparing = selectedMood && !isSitWithMe && preloadProgress < 4;
+
+  let beginLabel = "Begin 🌿";
+  if (isPreparing && preloadProgress === 0) {
+    beginLabel = "Preparing your meadow...";
+  } else if (isPreparing && preloadProgress > 0) {
+    beginLabel = `Preparing... (${preloadProgress}/4)`;
+  }
+
   return (
     <ScrollView
       style={styles.moodScrollView}
@@ -435,14 +448,32 @@ function MoodSelector({
         </View>
 
         <Pressable
-          style={[styles.beginButton, !selectedMood && styles.beginButtonDisabled]}
+          style={[
+            styles.beginButton,
+            !selectedMood && styles.beginButtonDisabled,
+            isPreparing && { opacity: 0.8 },
+          ]}
           onPress={() => {
             if (!selectedMood) return;
-            console.log("[FiveMinuteMeadow] Begin button pressed", { mood: selectedMood, sound: selectedSound });
+            console.log("[FiveMinuteMeadow] Begin button pressed", {
+              mood: selectedMood,
+              sound: selectedSound,
+              preloadProgress,
+              isReady,
+            });
             onBegin();
           }}
         >
-          <Text style={styles.beginButtonText}>Begin 🌿</Text>
+          <View style={styles.beginButtonInner}>
+            {isPreparing && (
+              <ActivityIndicator
+                size="small"
+                color="rgba(255,255,255,0.9)"
+                style={styles.beginSpinner}
+              />
+            )}
+            <Text style={styles.beginButtonText}>{beginLabel}</Text>
+          </View>
         </Pressable>
       </View>
     </ScrollView>
@@ -458,7 +489,6 @@ function MeadowControls({
   progress,
   soundLabel,
   isSoundMuted,
-  isLoadingAudio,
   insets,
 }: {
   isPaused: boolean;
@@ -468,7 +498,6 @@ function MeadowControls({
   progress: Animated.Value;
   soundLabel: string;
   isSoundMuted: boolean;
-  isLoadingAudio: boolean;
   insets: { bottom: number };
 }) {
   const progressWidth = progress.interpolate({
@@ -507,11 +536,7 @@ function MeadowControls({
             onToggleSound();
           }}
         >
-          {isLoadingAudio ? (
-            <ActivityIndicator size="small" color="rgba(255,255,255,0.9)" />
-          ) : (
-            <Text style={styles.controlBtnText}>{muteIcon}</Text>
-          )}
+          <Text style={styles.controlBtnText}>{muteIcon}</Text>
         </Pressable>
 
         <Pressable
@@ -635,11 +660,18 @@ export default function FiveMinuteMeadow() {
 
   // Audio state
   const ambientSoundRef = useRef<AudioPlayer | null>(null);
-  const guidanceAudioRef = useRef<AudioPlayer | null>(null);
+  const guidancePlayerRef = useRef<AudioPlayer | null>(null);
+  /** @deprecated use guidancePlayerRef */
+  const guidanceAudioRef = guidancePlayerRef;
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [audioError, setAudioError] = useState(false);
   const [isSoundMuted, setIsSoundMuted] = useState(false);
   const previewTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Preload state
+  const preloadedAudioRef = useRef<Record<number, string | null>>({ 1: null, 2: null, 3: null, 4: null });
+  const [preloadProgress, setPreloadProgress] = useState(0);
+  const isPreloadingRef = useRef(false);
 
   const gradient = getTimeOfDayGradient();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -692,63 +724,81 @@ export default function FiveMinuteMeadow() {
   const loadGuidanceForPhase = useCallback(async (phaseNum: number, mood: string) => {
     if (mood === "SIT WITH ME") return;
 
-    const phaseMessages = PHASE_MESSAGES[phaseNum];
-    if (!phaseMessages) return;
+    const cachedPath = preloadedAudioRef.current[phaseNum];
+    if (!cachedPath) {
+      // Not preloaded yet — text-only fallback for this phase
+      console.log("[FiveMinuteMeadow] Phase audio not ready, text-only for phase", phaseNum);
+      return;
+    }
 
-    const phaseText = phaseMessages.join(" ");
-
-    console.log("[FiveMinuteMeadow] Requesting guidance audio", { phase: phaseNum, mood });
-    setIsLoadingAudio(true);
     try {
-      const { data, error } = await (supabase as any).functions.invoke("generate-meditation-audio", {
-        body: { mood, phase: phaseNum, phaseText },
-      });
-
-      if (error || !data?.audioBase64) {
-        console.warn("[FiveMinuteMeadow] Guidance audio error or missing data", { error });
-        setAudioError(true);
-        return;
-      }
-
-      console.log("[FiveMinuteMeadow] Guidance audio received, writing to temp file");
-
-      // Write base64 to temp file (expo-audio doesn't support data URIs)
-      const tempPath = `${FileSystem.cacheDirectory}guidance_phase_${phaseNum}.mp3`;
-      try {
-        await FileSystem.writeAsStringAsync(tempPath, data.audioBase64, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-      } catch (writeErr) {
-        console.warn("[FiveMinuteMeadow] Failed to write guidance audio temp file", writeErr);
-        setAudioError(true);
-        return;
-      }
-
       // Remove previous guidance player
       try {
-        guidanceAudioRef.current?.remove();
-        guidanceAudioRef.current = null;
+        guidancePlayerRef.current?.remove();
+        guidancePlayerRef.current = null;
       } catch (e) {
         // silent
       }
 
-      try {
-        const player = createAudioPlayer({ uri: tempPath });
-        player.volume = 0.9;
-        player.play();
-        guidanceAudioRef.current = player;
-        console.log("[FiveMinuteMeadow] Guidance audio playing from temp file", { tempPath });
-      } catch (playerErr) {
-        console.warn("[FiveMinuteMeadow] Failed to create guidance audio player", playerErr);
-        setAudioError(true);
-        return;
-      }
+      const player = createAudioPlayer({ uri: cachedPath });
+      player.volume = isSoundMuted ? 0 : 0.9;
+      player.play();
+      guidancePlayerRef.current = player;
+      console.log("[FiveMinuteMeadow] Playing preloaded guidance for phase", phaseNum);
     } catch (e) {
-      console.warn("[FiveMinuteMeadow] Unexpected error loading guidance audio", e);
-      setAudioError(true);
-    } finally {
-      setIsLoadingAudio(false);
+      console.warn("[FiveMinuteMeadow] Failed to play preloaded guidance", e);
     }
+  }, [isSoundMuted]);
+
+  const preloadAllPhases = useCallback(async (mood: string) => {
+    if (mood === "SIT WITH ME") return;
+    if (isPreloadingRef.current) return;
+    isPreloadingRef.current = true;
+    preloadedAudioRef.current = { 1: null, 2: null, 3: null, 4: null };
+    setPreloadProgress(0);
+    console.log("[FiveMinuteMeadow] Starting background preload for all phases", { mood });
+
+    for (const phaseNum of [1, 2, 3, 4]) {
+      try {
+        const phaseMessages = PHASE_MESSAGES[phaseNum];
+        if (!phaseMessages) continue;
+        const phaseText = phaseMessages.join(" ");
+
+        console.log("[FiveMinuteMeadow] Preloading phase audio", { phase: phaseNum, mood });
+
+        const invokePromise = (supabase as any).functions.invoke("generate-meditation-audio", {
+          body: { mood, phase: phaseNum, phaseText },
+        });
+
+        const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
+          Promise.race([
+            promise,
+            new Promise<T>((_, reject) =>
+              setTimeout(() => reject(new Error("timeout")), ms)
+            ),
+          ]);
+
+        const { data, error } = await withTimeout(invokePromise, 20000);
+
+        if (!error && data?.audioBase64) {
+          const tempPath = `${FileSystem.cacheDirectory}guidance_phase_${phaseNum}_${Date.now()}.mp3`;
+          await FileSystem.writeAsStringAsync(tempPath, data.audioBase64, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          preloadedAudioRef.current[phaseNum] = tempPath;
+          console.log("[FiveMinuteMeadow] Phase preloaded successfully", { phase: phaseNum, tempPath });
+        } else {
+          console.warn("[FiveMinuteMeadow] Preload failed for phase", phaseNum, { error });
+        }
+      } catch (e) {
+        console.warn("[FiveMinuteMeadow] Preload error for phase", phaseNum, e);
+        // Silent fail — text-only fallback for this phase
+      }
+      setPreloadProgress((p) => p + 1);
+    }
+
+    isPreloadingRef.current = false;
+    console.log("[FiveMinuteMeadow] Background preload complete", { mood });
   }, []);
 
   const startAudio = useCallback(async (mood: string, sound: string) => {
