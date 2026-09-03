@@ -8,11 +8,14 @@ import {
   Dimensions,
   StatusBar,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Audio } from "expo-av";
+import * as FileSystem from "expo-file-system/legacy";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useBabies } from "@/contexts/BabiesContext";
 import { supabase } from "@/app/integrations/supabase/client";
@@ -20,6 +23,18 @@ import { supabase } from "@/app/integrations/supabase/client";
 const { width: SW, height: SH } = Dimensions.get("window");
 
 const SOUND_KEY = "meadow_last_sound";
+
+const AMBIENT_SOUND_URLS: Record<string, string | null> = {
+  "Gentle Rain": "https://www.soundjay.com/nature/sounds/rain-01.mp3",
+  "Ocean Waves": "https://www.soundjay.com/nature/sounds/ocean-wave-1.mp3",
+  "Forest & Birds": "https://www.soundjay.com/nature/sounds/birds-in-forest-1.mp3",
+  "Morning Birds": "https://www.soundjay.com/nature/sounds/birds-singing-1.mp3",
+  "Gentle Stream": "https://www.soundjay.com/nature/sounds/stream-1.mp3",
+  "Soft Fireplace": "https://www.soundjay.com/nature/sounds/fire-burning-1.mp3",
+  "Night Meadow": "https://www.soundjay.com/nature/sounds/crickets-1.mp3",
+  "Soft Instrumental": "https://www.bensound.com/bensound-music/bensound-relaxing.mp3",
+  "Silence": null,
+};
 
 const MOODS = [
   { label: "I'm overwhelmed", emoji: "🌧️" },
@@ -306,9 +321,10 @@ function MeadowBackground({
 }
 
 // ─── Guided text overlay ──────────────────────────────────────────────────────
-function GuidedTextOverlay({ text }: { text: string }) {
+function GuidedTextOverlay({ text, isLoadingAudio }: { text: string; isLoadingAudio: boolean }) {
   const opacity = useRef(new Animated.Value(0)).current;
   const prevText = useRef(text);
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
     if (text !== prevText.current) {
@@ -322,9 +338,25 @@ function GuidedTextOverlay({ text }: { text: string }) {
     }
   }, [text]);
 
+  useEffect(() => {
+    if (!isLoadingAudio) {
+      pulseAnim.setValue(0.4);
+      return;
+    }
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [isLoadingAudio]);
+
   return (
     <Animated.View style={[styles.guidedTextContainer, { opacity }]}>
       <Text style={styles.guidedText}>{text}</Text>
+      {isLoadingAudio && (
+        <Animated.View style={[styles.audioLoadingDot, { opacity: pulseAnim }]} />
+      )}
     </Animated.View>
   );
 }
@@ -424,6 +456,8 @@ function MeadowControls({
   onExit,
   progress,
   soundLabel,
+  isSoundMuted,
+  isLoadingAudio,
   insets,
 }: {
   isPaused: boolean;
@@ -432,6 +466,8 @@ function MeadowControls({
   onExit: () => void;
   progress: Animated.Value;
   soundLabel: string;
+  isSoundMuted: boolean;
+  isLoadingAudio: boolean;
   insets: { bottom: number };
 }) {
   const progressWidth = progress.interpolate({
@@ -439,6 +475,8 @@ function MeadowControls({
     outputRange: [0, SW - 40],
     extrapolate: "clamp",
   });
+
+  const muteIcon = isSoundMuted ? "🔇" : "🔊";
 
   return (
     <View style={[styles.controlsContainer, { paddingBottom: insets.bottom + 16 }]}>
@@ -464,11 +502,15 @@ function MeadowControls({
         <Pressable
           style={styles.controlBtn}
           onPress={() => {
-            console.log("[FiveMinuteMeadow] Sound toggle button pressed");
+            console.log("[FiveMinuteMeadow] Sound toggle button pressed", { isSoundMuted });
             onToggleSound();
           }}
         >
-          <Text style={styles.controlBtnText}>🔊</Text>
+          {isLoadingAudio ? (
+            <ActivityIndicator size="small" color="rgba(255,255,255,0.9)" />
+          ) : (
+            <Text style={styles.controlBtnText}>{muteIcon}</Text>
+          )}
         </Pressable>
 
         <Pressable
@@ -590,6 +632,14 @@ export default function FiveMinuteMeadow() {
   const [saved, setSaved] = useState(false);
   const [soundVisible, setSoundVisible] = useState(true);
 
+  // Audio state
+  const ambientSoundRef = useRef<Audio.Sound | null>(null);
+  const guidanceAudioRef = useRef<Audio.Sound | null>(null);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [audioError, setAudioError] = useState(false);
+  const [isSoundMuted, setIsSoundMuted] = useState(false);
+  const previewTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const gradient = getTimeOfDayGradient();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const textIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -612,6 +662,227 @@ export default function FiveMinuteMeadow() {
       router.replace("/paywall");
     }
   }, [isSubscribed, subLoading]);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      cleanupAudio();
+      if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
+    };
+  }, []);
+
+  // ─── Audio helpers ──────────────────────────────────────────────────────────
+
+  const cleanupAudio = async () => {
+    try {
+      if (ambientSoundRef.current) {
+        await ambientSoundRef.current.stopAsync();
+        await ambientSoundRef.current.unloadAsync();
+        ambientSoundRef.current = null;
+      }
+    } catch (e) {
+      // silent
+    }
+    try {
+      if (guidanceAudioRef.current) {
+        await guidanceAudioRef.current.stopAsync();
+        await guidanceAudioRef.current.unloadAsync();
+        guidanceAudioRef.current = null;
+      }
+    } catch (e) {
+      // silent
+    }
+  };
+
+  const loadGuidanceForPhase = useCallback(async (phaseNum: number, mood: string) => {
+    if (mood === "SIT WITH ME") return;
+
+    const phaseMessages = PHASE_MESSAGES[phaseNum];
+    if (!phaseMessages) return;
+
+    const phaseText = phaseMessages.join(" ");
+
+    console.log("[FiveMinuteMeadow] Requesting guidance audio", { phase: phaseNum, mood });
+    setIsLoadingAudio(true);
+    try {
+      const { data, error } = await (supabase as any).functions.invoke("generate-meditation-audio", {
+        body: { mood, phase: phaseNum, phaseText },
+      });
+
+      if (error || !data?.audioBase64) {
+        console.warn("[FiveMinuteMeadow] Guidance audio error or missing data", { error });
+        setAudioError(true);
+        return;
+      }
+
+      console.log("[FiveMinuteMeadow] Guidance audio received, loading sound");
+
+      // Stop previous guidance audio
+      try {
+        if (guidanceAudioRef.current) {
+          await guidanceAudioRef.current.stopAsync();
+          await guidanceAudioRef.current.unloadAsync();
+          guidanceAudioRef.current = null;
+        }
+      } catch (e) {
+        // silent
+      }
+
+      // Try data URI first; fall back to temp file if needed
+      let audioUri = `data:audio/mp3;base64,${data.audioBase64}`;
+      let sound: Audio.Sound | null = null;
+
+      try {
+        const result = await Audio.Sound.createAsync(
+          { uri: audioUri },
+          { shouldPlay: true, volume: 0.9 }
+        );
+        sound = result.sound;
+      } catch (dataUriErr) {
+        console.warn("[FiveMinuteMeadow] data URI failed, falling back to temp file", dataUriErr);
+        try {
+          const tempPath = `${FileSystem.cacheDirectory}guidance_phase_${phaseNum}.mp3`;
+          await FileSystem.writeAsStringAsync(tempPath, data.audioBase64, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          const result = await Audio.Sound.createAsync(
+            { uri: tempPath },
+            { shouldPlay: true, volume: 0.9 }
+          );
+          sound = result.sound;
+          console.log("[FiveMinuteMeadow] Guidance audio loaded from temp file", { tempPath });
+        } catch (fileErr) {
+          console.warn("[FiveMinuteMeadow] Temp file fallback also failed", fileErr);
+          setAudioError(true);
+          return;
+        }
+      }
+
+      if (sound) {
+        guidanceAudioRef.current = sound;
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            console.log("[FiveMinuteMeadow] Guidance audio finished for phase", phaseNum);
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("[FiveMinuteMeadow] Unexpected error loading guidance audio", e);
+      setAudioError(true);
+    } finally {
+      setIsLoadingAudio(false);
+    }
+  }, []);
+
+  const startAudio = useCallback(async (mood: string, sound: string) => {
+    console.log("[FiveMinuteMeadow] Starting audio", { mood, sound });
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        staysActiveInBackground: true,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+    } catch (e) {
+      console.warn("[FiveMinuteMeadow] setAudioModeAsync failed", e);
+    }
+
+    // Load ambient sound (looping)
+    const ambientUrl = AMBIENT_SOUND_URLS[sound];
+    if (ambientUrl) {
+      try {
+        console.log("[FiveMinuteMeadow] Loading ambient sound", { sound, url: ambientUrl });
+        const { sound: ambientSound } = await Audio.Sound.createAsync(
+          { uri: ambientUrl },
+          { isLooping: true, volume: 0.4, shouldPlay: true }
+        );
+        ambientSoundRef.current = ambientSound;
+        console.log("[FiveMinuteMeadow] Ambient sound playing");
+      } catch (e) {
+        console.warn("[FiveMinuteMeadow] Ambient sound failed to load (silent fail)", e);
+      }
+    }
+
+    // Load first guidance audio
+    await loadGuidanceForPhase(1, mood);
+  }, [loadGuidanceForPhase]);
+
+  const previewSound = useCallback(async (soundName: string) => {
+    console.log("[FiveMinuteMeadow] Previewing sound", { soundName });
+
+    // Clear any pending auto-stop
+    if (previewTimeoutRef.current) {
+      clearTimeout(previewTimeoutRef.current);
+      previewTimeoutRef.current = null;
+    }
+
+    // Stop any existing preview
+    try {
+      if (ambientSoundRef.current) {
+        await ambientSoundRef.current.stopAsync();
+        await ambientSoundRef.current.unloadAsync();
+        ambientSoundRef.current = null;
+      }
+    } catch (e) {
+      // silent
+    }
+
+    const url = AMBIENT_SOUND_URLS[soundName];
+    if (!url) return;
+
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: url },
+        { shouldPlay: true, volume: 0.5 }
+      );
+      ambientSoundRef.current = sound;
+      console.log("[FiveMinuteMeadow] Sound preview started", { soundName });
+
+      // Auto-stop after 3 seconds
+      previewTimeoutRef.current = setTimeout(async () => {
+        try {
+          if (ambientSoundRef.current) {
+            await ambientSoundRef.current.stopAsync();
+            await ambientSoundRef.current.unloadAsync();
+            ambientSoundRef.current = null;
+            console.log("[FiveMinuteMeadow] Sound preview auto-stopped", { soundName });
+          }
+        } catch (e) {
+          // silent
+        }
+      }, 3000);
+    } catch (e) {
+      console.warn("[FiveMinuteMeadow] Sound preview failed (silent fail)", e);
+    }
+  }, []);
+
+  const toggleMute = useCallback(async () => {
+    const newMuted = !isSoundMuted;
+    console.log("[FiveMinuteMeadow] Toggle mute", { newMuted });
+    setIsSoundMuted(newMuted);
+    try {
+      if (ambientSoundRef.current) {
+        await ambientSoundRef.current.setVolumeAsync(newMuted ? 0 : 0.4);
+      }
+    } catch (e) {
+      // silent
+    }
+    try {
+      if (guidanceAudioRef.current) {
+        await guidanceAudioRef.current.setVolumeAsync(newMuted ? 0 : 0.9);
+      }
+    } catch (e) {
+      // silent
+    }
+  }, [isSoundMuted]);
 
   // Timer
   useEffect(() => {
@@ -645,14 +916,17 @@ export default function FiveMinuteMeadow() {
       setPhase(2);
       setTextIndex(0);
       console.log("[FiveMinuteMeadow] Phase transition: BREATHE");
+      loadGuidanceForPhase(2, selectedMood);
     } else if (elapsedSeconds >= 150 && elapsedSeconds < 240 && phase !== 3) {
       setPhase(3);
       setTextIndex(0);
       console.log("[FiveMinuteMeadow] Phase transition: RELEASE");
+      loadGuidanceForPhase(3, selectedMood);
     } else if (elapsedSeconds >= 240 && elapsedSeconds < 300 && phase !== 4) {
       setPhase(4);
       setTextIndex(0);
       console.log("[FiveMinuteMeadow] Phase transition: RETURN");
+      loadGuidanceForPhase(4, selectedMood);
     }
 
     // Butterfly at 4:00
@@ -698,25 +972,59 @@ export default function FiveMinuteMeadow() {
   }, [phase]);
 
   const handleBegin = useCallback(() => {
+    // Stop any sound preview before starting
+    if (previewTimeoutRef.current) {
+      clearTimeout(previewTimeoutRef.current);
+      previewTimeoutRef.current = null;
+    }
     AsyncStorage.setItem(SOUND_KEY, selectedSound).catch(() => {});
     setElapsedSeconds(0);
     setPhase(1);
     setTextIndex(0);
     setShowButterfly(false);
+    setAudioError(false);
+    setIsSoundMuted(false);
     cloudOverlay.setValue(0.3);
     goldenOverlay.setValue(0);
     progressAnim.setValue(0);
     console.log("[FiveMinuteMeadow] Meditation started", { mood: selectedMood, sound: selectedSound });
-  }, [selectedMood, selectedSound]);
+    startAudio(selectedMood, selectedSound);
+  }, [selectedMood, selectedSound, startAudio]);
 
-  const handlePause = useCallback(() => {
-    setIsPaused((p) => !p);
-  }, []);
+  const handlePauseResume = useCallback(async () => {
+    const newPaused = !isPaused;
+    console.log("[FiveMinuteMeadow] Pause/resume toggled", { newPaused });
+    setIsPaused(newPaused);
+    try {
+      if (ambientSoundRef.current) {
+        if (newPaused) {
+          await ambientSoundRef.current.pauseAsync();
+        } else {
+          await ambientSoundRef.current.playAsync();
+        }
+      }
+    } catch (e) {
+      // silent
+    }
+    try {
+      if (guidanceAudioRef.current) {
+        if (newPaused) {
+          await guidanceAudioRef.current.pauseAsync();
+        } else {
+          await guidanceAudioRef.current.playAsync();
+        }
+      }
+    } catch (e) {
+      // silent
+    }
+  }, [isPaused]);
 
-  const handleExit = useCallback(() => {
+  const handleExit = useCallback(async () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (textIntervalRef.current) clearInterval(textIntervalRef.current);
+    if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
     console.log("[FiveMinuteMeadow] Exiting meditation early", { elapsedSeconds });
+    await cleanupAudio();
     router.back();
   }, [elapsedSeconds]);
 
@@ -749,9 +1057,15 @@ export default function FiveMinuteMeadow() {
     }
   }, [babies, selectedMood, selectedFeeling]);
 
-  const handleReturn = useCallback(() => {
+  const handleReturn = useCallback(async () => {
+    await cleanupAudio();
     router.back();
   }, []);
+
+  const handleSelectSound = useCallback((soundName: string) => {
+    setSelectedSound(soundName);
+    previewSound(soundName);
+  }, [previewSound]);
 
   const isSitWithMe = selectedMood === "SIT WITH ME";
   const currentMessages = PHASE_MESSAGES[phase as 1 | 2 | 3 | 4] ?? [];
@@ -778,7 +1092,7 @@ export default function FiveMinuteMeadow() {
           selectedMood={selectedMood}
           selectedSound={selectedSound}
           onSelectMood={setSelectedMood}
-          onSelectSound={setSelectedSound}
+          onSelectSound={handleSelectSound}
           onBegin={handleBegin}
           insets={insets}
         />
@@ -787,17 +1101,30 @@ export default function FiveMinuteMeadow() {
       {/* Phases 1–4: Meditation */}
       {phase >= 1 && phase <= 4 && (
         <>
-          {!isSitWithMe && <GuidedTextOverlay text={currentText} />}
+          {!isSitWithMe && (
+            <GuidedTextOverlay
+              text={currentText}
+              isLoadingAudio={isLoadingAudio}
+            />
+          )}
+
+          {audioError && (
+            <View style={styles.audioErrorBanner}>
+              <Text style={styles.audioErrorText}>
+                Voice guidance unavailable — text mode active
+              </Text>
+            </View>
+          )}
 
           <MeadowControls
             isPaused={isPaused}
-            onPause={handlePause}
-            onToggleSound={() => {
-              setSoundVisible((v) => !v);
-            }}
+            onPause={handlePauseResume}
+            onToggleSound={toggleMute}
             onExit={handleExit}
             progress={progressAnim}
             soundLabel={soundLabelDisplay}
+            isSoundMuted={isSoundMuted}
+            isLoadingAudio={isLoadingAudio}
             insets={insets}
           />
         </>
@@ -870,6 +1197,29 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0,0,0,0.3)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 8,
+  },
+  audioLoadingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.8)",
+    marginTop: 12,
+  },
+
+  // Audio error banner
+  audioErrorBanner: {
+    position: "absolute",
+    bottom: 120,
+    left: 20,
+    right: 20,
+    alignItems: "center",
+  },
+  audioErrorText: {
+    fontSize: 11,
+    fontFamily: "Karla_400Regular",
+    color: "rgba(255,255,255,0.45)",
+    textAlign: "center",
+    letterSpacing: 0.3,
   },
 
   // Controls
