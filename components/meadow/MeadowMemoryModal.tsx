@@ -7,8 +7,6 @@ import {
   Pressable,
   ScrollView,
   Image,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 
 export type MeadowEvent = {
@@ -103,90 +101,95 @@ export function MeadowMemoryModal({ visible, event, onClose }: Props) {
       transparent
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoid}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        {/* Backdrop */}
+      <View style={styles.root}>
+        {/* Backdrop — rendered first so sheet paints on top */}
         <Pressable style={styles.backdrop} onPress={onClose} />
 
-        {/* Sheet */}
-        <View style={styles.sheet}>
-          {/* Close button */}
-          <Pressable
-            style={styles.closeButton}
-            onPress={() => {
-              console.log("[MeadowMemoryModal] Close button pressed");
-              onClose();
-            }}
-            accessibilityLabel="Close memory"
-          >
-            <Text style={styles.closeButtonText}>✕</Text>
-          </Pressable>
+        {/* Sheet — rendered after backdrop, positioned at bottom */}
+        <View style={styles.sheetContainer}>
+          <View style={styles.sheet}>
+            {/* Close button */}
+            <Pressable
+              style={styles.closeButton}
+              onPress={() => {
+                console.log("[MeadowMemoryModal] Close button pressed");
+                onClose();
+              }}
+              accessibilityLabel="Close memory"
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </Pressable>
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
-            style={styles.scrollView}
-          >
-            {/* Header */}
-            <View style={styles.headerRow}>
-              <Text style={styles.bigEmoji}>{emoji}</Text>
-              <View style={styles.typeBadge}>
-                <Text style={styles.typeBadgeText}>{typeLabel}</Text>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+              style={styles.scrollView}
+            >
+              {/* Header */}
+              <View style={styles.headerRow}>
+                <Text style={styles.bigEmoji}>{emoji}</Text>
+                <View style={styles.typeBadge}>
+                  <Text style={styles.typeBadgeText}>{typeLabel}</Text>
+                </View>
               </View>
-            </View>
 
-            <Text style={styles.title}>{event.title}</Text>
-            <Text style={styles.date}>{formattedDate}</Text>
+              <Text style={styles.title}>{event.title}</Text>
+              <Text style={styles.date}>{formattedDate}</Text>
 
-            {/* What happened */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>📝  What happened</Text>
-              <Text style={styles.sectionBody}>{description}</Text>
-            </View>
-
-            {/* How Mama felt */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>💗  How Mama felt</Text>
-              <Text style={styles.sectionBody}>{howMamaFelt}</Text>
-            </View>
-
-            {/* Photo */}
-            {event.photo_uri ? (
-              <View style={styles.photoContainer}>
-                <Image
-                  source={{ uri: event.photo_uri }}
-                  style={styles.photo}
-                  resizeMode="cover"
-                  accessibilityLabel="Memory photo"
-                />
+              {/* What happened */}
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>📝  What happened</Text>
+                <Text style={styles.sectionBody}>{description}</Text>
               </View>
-            ) : null}
-          </ScrollView>
+
+              {/* How Mama felt */}
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>💗  How Mama felt</Text>
+                <Text style={styles.sectionBody}>{howMamaFelt}</Text>
+              </View>
+
+              {/* Photo */}
+              {event.photo_uri ? (
+                <View style={styles.photoContainer}>
+                  <Image
+                    source={{ uri: event.photo_uri }}
+                    style={styles.photo}
+                    resizeMode="cover"
+                    accessibilityLabel="Memory photo"
+                  />
+                </View>
+              ) : null}
+            </ScrollView>
+          </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  keyboardAvoid: {
+  root: {
     flex: 1,
-    justifyContent: "flex-end",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.45)",
   },
+  sheetContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
   sheet: {
     backgroundColor: COLORS.cream,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    maxHeight: "85%",
+    maxHeight: 600,
     paddingTop: 20,
     borderWidth: 1,
     borderColor: COLORS.accentBorder,
+    borderBottomWidth: 0,
   },
   closeButton: {
     position: "absolute",
@@ -206,7 +209,8 @@ const styles = StyleSheet.create({
     fontFamily: "Karla_700Bold",
   },
   scrollView: {
-    flex: 1,
+    flexGrow: 0,
+    maxHeight: 560,
   },
   scrollContent: {
     paddingHorizontal: 24,

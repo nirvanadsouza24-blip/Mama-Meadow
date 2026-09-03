@@ -7,8 +7,6 @@ import {
   Pressable,
   ScrollView,
   Animated,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import type { MeadowEvent } from "./MeadowMemoryModal";
 
@@ -207,78 +205,82 @@ export function WalkThroughMeadowModal({ visible, events, onClose }: Props) {
         onClose();
       }}
     >
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoid}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        {/* Backdrop */}
+      <View style={styles.root}>
+        {/* Backdrop — rendered first so sheet paints on top */}
         <Pressable style={styles.backdrop} onPress={onClose} />
 
-        {/* Sheet */}
-        <View style={styles.sheet}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.headerText}>
-              <Text style={styles.headerTitle}>Walk Through My Meadow 🌸</Text>
-              <Text style={styles.headerSubtitle}>Your journey, from the very beginning</Text>
+        {/* Sheet — rendered after backdrop, positioned at bottom */}
+        <View style={styles.sheetContainer}>
+          <View style={styles.sheet}>
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.headerText}>
+                <Text style={styles.headerTitle}>Walk Through My Meadow 🌸</Text>
+                <Text style={styles.headerSubtitle}>Your journey, from the very beginning</Text>
+              </View>
+              <Pressable
+                style={styles.closeButton}
+                onPress={() => {
+                  console.log("[WalkThroughMeadowModal] Close button pressed");
+                  onClose();
+                }}
+                accessibilityLabel="Close walk through meadow"
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </Pressable>
             </View>
-            <Pressable
-              style={styles.closeButton}
-              onPress={() => {
-                console.log("[WalkThroughMeadowModal] Close button pressed");
-                onClose();
-              }}
-              accessibilityLabel="Close walk through meadow"
-            >
-              <Text style={styles.closeButtonText}>✕</Text>
-            </Pressable>
-          </View>
 
-          {/* Timeline */}
-          {sortedEvents.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>🌱</Text>
-              <Text style={styles.emptyTitle}>Your meadow is just beginning to grow</Text>
-              <Text style={styles.emptySubtitle}>
-                Add your first moment to start your journey
-              </Text>
-            </View>
-          ) : (
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.timelineContainer}
-              style={styles.timelineScroll}
-            >
-              {sortedEvents.map((event, index) => (
-                <TimelineItem
-                  key={event.id}
-                  event={event}
-                  index={index}
-                  isLast={index === sortedEvents.length - 1}
-                />
-              ))}
-            </ScrollView>
-          )}
+            {/* Timeline */}
+            {sortedEvents.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyEmoji}>🌱</Text>
+                <Text style={styles.emptyTitle}>Your meadow is just beginning to grow</Text>
+                <Text style={styles.emptySubtitle}>
+                  Add your first moment to start your journey
+                </Text>
+              </View>
+            ) : (
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.timelineContainer}
+                style={styles.timelineScroll}
+              >
+                {sortedEvents.map((event, index) => (
+                  <TimelineItem
+                    key={event.id}
+                    event={event}
+                    index={index}
+                    isLast={index === sortedEvents.length - 1}
+                  />
+                ))}
+              </ScrollView>
+            )}
+          </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  keyboardAvoid: {
+  root: {
     flex: 1,
-    justifyContent: "flex-end",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.5)",
   },
+  sheetContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
   sheet: {
     backgroundColor: COLORS.cream,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    height: "92%",
+    height: 620,
     borderWidth: 1,
     borderColor: COLORS.accentBorder,
   },
@@ -365,15 +367,14 @@ const styles = StyleSheet.create({
   timelineRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 10,
   },
   timelineEmoji: {
     fontSize: 24,
     marginTop: 2,
+    marginRight: 10,
   },
   timelineTextBlock: {
     flex: 1,
-    gap: 3,
   },
   timelineTitle: {
     fontSize: 15,
@@ -387,6 +388,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Karla_400Regular",
     color: COLORS.textTertiary,
+    marginTop: 3,
   },
   typeBadge: {
     alignSelf: "flex-start",
@@ -394,7 +396,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
-    marginTop: 2,
+    marginTop: 5,
   },
   typeBadgeText: {
     fontSize: 11,
@@ -415,16 +417,16 @@ const styles = StyleSheet.create({
   },
   expandedDetails: {
     marginTop: 12,
-    gap: 8,
   },
   expandedRow: {
-    gap: 4,
+    marginBottom: 8,
   },
   expandedLabel: {
     fontSize: 12,
     fontFamily: "Karla_700Bold",
     color: COLORS.textSecondary,
     letterSpacing: 0.2,
+    marginBottom: 4,
   },
   expandedBody: {
     fontSize: 14,
