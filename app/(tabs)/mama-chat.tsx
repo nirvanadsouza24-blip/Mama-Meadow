@@ -418,6 +418,14 @@ export default function MamaChatScreen() {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           keyboardVerticalOffset={0}
         >
+          {/* Medical disclaimer banner */}
+          <View style={styles.disclaimerBanner}>
+            <Text style={styles.disclaimerIcon}>⚕️</Text>
+            <Text style={styles.disclaimerText}>
+              Mama Meadow Chat is for emotional support only and is not a substitute for professional medical advice. If you have a medical concern, please consult your doctor.
+            </Text>
+          </View>
+
           {/* Messages */}
           <ScrollView
             ref={scrollRef}
@@ -540,6 +548,28 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     width: 36,
+  },
+
+  // Disclaimer banner
+  disclaimerBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(200, 149, 108, 0.12)",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    gap: 6,
+  },
+  disclaimerIcon: {
+    fontSize: 12,
+    flexShrink: 0,
+  },
+  disclaimerText: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: "Karla_400Regular",
+    color: "#7A5C44",
+    lineHeight: 15,
+    textAlign: "center",
   },
 
   // Chat

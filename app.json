@@ -16,7 +16,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.mamameadow.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "Mama Meadow uses your photo library to add photos of your baby and capture monthly milestones.",
+        "NSPhotoLibraryAddUsageDescription": "Mama Meadow saves your baby's milestone photos to your photo library."
       }
     },
     "android": {
