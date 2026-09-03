@@ -26,14 +26,14 @@ const { width: SW, height: SH } = Dimensions.get("window");
 const SOUND_KEY = "meadow_last_sound";
 
 const AMBIENT_SOUND_URLS: Record<string, string | null> = {
-  "Gentle Rain": "https://cdn.pixabay.com/audio/2022/03/10/audio_270f9b0d4e.mp3",
-  "Ocean Waves": "https://cdn.pixabay.com/audio/2021/09/06/audio_6b8a3e3e3e.mp3",
-  "Forest & Birds": "https://cdn.pixabay.com/audio/2022/03/15/audio_8cb749d3e5.mp3",
-  "Morning Birds": "https://cdn.pixabay.com/audio/2022/03/09/audio_c8e134f24b.mp3",
-  "Gentle Stream": "https://cdn.pixabay.com/audio/2021/08/09/audio_dc39bde808.mp3",
-  "Soft Fireplace": "https://cdn.pixabay.com/audio/2022/01/18/audio_d0c6ff1bab.mp3",
-  "Night Meadow": "https://cdn.pixabay.com/audio/2022/03/10/audio_270f9b0d4e.mp3",
-  "Soft Instrumental": "https://cdn.pixabay.com/audio/2022/08/02/audio_884fe92c21.mp3",
+  "Gentle Rain":       "https://cdn.freesound.org/previews/346/346170_5121236-lq.mp3",
+  "Ocean Waves":       "https://cdn.freesound.org/previews/371/371277_6890003-lq.mp3",
+  "Forest & Birds":    "https://cdn.freesound.org/previews/416/416529_5121236-lq.mp3",
+  "Morning Birds":     "https://cdn.freesound.org/previews/514/514853_5121236-lq.mp3",
+  "Gentle Stream":     "https://cdn.freesound.org/previews/459/459977_9497060-lq.mp3",
+  "Soft Fireplace":    "https://cdn.freesound.org/previews/151/151022_1838058-lq.mp3",
+  "Night Meadow":      "https://cdn.freesound.org/previews/269/269171_4921277-lq.mp3",
+  "Soft Instrumental": "https://cdn.freesound.org/previews/612/612095_5121236-lq.mp3",
   "Silence": null,
 };
 
@@ -822,6 +822,11 @@ export default function FiveMinuteMeadow() {
         player.loop = true;
         player.volume = 0.4;
         player.play();
+        player.addListener("playbackStatusUpdate", (status: any) => {
+          if (status.error) {
+            console.warn("[FiveMinuteMeadow] Ambient playback error:", status.error);
+          }
+        });
         ambientSoundRef.current = player;
         console.log("[FiveMinuteMeadow] Ambient sound playing");
       } catch (e) {
@@ -1088,6 +1093,7 @@ export default function FiveMinuteMeadow() {
           onSelectSound={handleSelectSound}
           onBegin={handleBegin}
           insets={insets}
+          preloadProgress={preloadProgress}
         />
       )}
 
