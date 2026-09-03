@@ -461,7 +461,7 @@ export default function PaywallScreen() {
                   style={styles.prominentLinkButton}
                   onPress={() => {
                     console.log('[Paywall] Terms of Use link tapped (in-scroll)');
-                    Linking.openURL("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/");
+                    Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/terms");
                   }}
                 >
                   <Text style={styles.prominentLinkText}>Terms of Use</Text>
@@ -491,7 +491,7 @@ export default function PaywallScreen() {
                     style={styles.prominentLinkButton}
                     onPress={() => {
                       console.log('[Paywall] Terms of Use link tapped (web)');
-                      Linking.openURL("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/");
+                      Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/terms");
                     }}
                   >
                     <Text style={styles.prominentLinkText}>Terms of Use</Text>
@@ -546,7 +546,7 @@ export default function PaywallScreen() {
                   {" · "}
                   <Text
                     style={styles.legalLink}
-                    onPress={() => Linking.openURL("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")}
+                    onPress={() => Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/terms")}
                   >
                     Terms of Use
                   </Text>
@@ -570,7 +570,7 @@ export default function PaywallScreen() {
                     style={styles.prominentLinkButton}
                     onPress={() => {
                       console.log('[Paywall] Terms of Use link tapped');
-                      Linking.openURL("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/");
+                      Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/terms");
                     }}
                   >
                     <Text style={styles.prominentLinkText}>Terms of Use</Text>
@@ -638,7 +638,7 @@ export default function PaywallScreen() {
                   {" · "}
                   <Text
                     style={styles.legalLink}
-                    onPress={() => Linking.openURL("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")}
+                    onPress={() => Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/terms")}
                   >
                     Terms of Use
                   </Text>

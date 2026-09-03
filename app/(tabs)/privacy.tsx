@@ -182,7 +182,7 @@ export default function PrivacyScreen() {
 
   const handleTerms = () => {
     console.log("[PrivacyScreen] Terms of Use link pressed");
-    Linking.openURL("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/");
+    Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/terms");
   };
 
   return (
