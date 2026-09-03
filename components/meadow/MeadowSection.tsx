@@ -280,6 +280,11 @@ export function MeadowSection() {
     router.push("/paywall");
   }, [router]);
 
+  const handleFiveMinutesPress = useCallback(() => {
+    console.log("[MeadowSection] 5-Minute Meadow button pressed — navigating to five-minute-meadow");
+    router.push("/five-minute-meadow");
+  }, [router]);
+
   const handleSaved = useCallback(() => {
     console.log("[MeadowSection] New meadow event saved — reloading events");
     setShowAddModal(false);
@@ -337,6 +342,14 @@ export function MeadowSection() {
         <Text style={styles.dailyCardTitle}>Today in Your Meadow</Text>
         <Text style={styles.dailyCardMessage}>{dailyMessage}</Text>
       </View>
+
+      {/* 5-Minute Meadow hero CTA */}
+      <Pressable
+        style={styles.fiveMinuteButton}
+        onPress={handleFiveMinutesPress}
+      >
+        <Text style={styles.fiveMinuteButtonText}>🌿 I NEED 5 MINUTES</Text>
+      </Pressable>
 
       {/* Action buttons */}
       <View style={styles.buttonRow}>
@@ -513,6 +526,27 @@ const styles = StyleSheet.create({
     fontFamily: "Karla_400Regular",
     color: COLORS.text,
     lineHeight: 22,
+  },
+
+  // 5-Minute Meadow hero button
+  fiveMinuteButton: {
+    backgroundColor: "#4A7C59",
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginBottom: 10,
+    shadowColor: "#4A7C59",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  fiveMinuteButtonText: {
+    fontSize: 15,
+    fontFamily: "Karla_700Bold",
+    fontWeight: "700",
+    color: "#fff",
+    letterSpacing: 0.5,
   },
 
   // Buttons
