@@ -9,6 +9,7 @@ import {
   StatusBar,
   ScrollView,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -101,6 +102,79 @@ const PHASE_MESSAGES: Record<number, string[]> = {
     "🌸",
   ],
 };
+
+// ─── Web audio fallback ───────────────────────────────────────────────────────
+
+class WebAudioPlayer {
+  private audio: HTMLAudioElement | null = null;
+  loop: boolean = false;
+  private _volume: number = 1.0;
+
+  get volume(): number {
+    return this._volume;
+  }
+  set volume(v: number) {
+    this._volume = v;
+    if (this.audio) this.audio.volume = v;
+  }
+
+  constructor(uri: string) {
+    if (typeof Audio !== "undefined") {
+      this.audio = new (window as any).Audio(uri);
+    }
+  }
+
+  play() {
+    if (this.audio) {
+      this.audio.loop = this.loop;
+      this.audio.volume = this._volume;
+      this.audio.play().catch((e: any) =>
+        console.warn("[WebAudio] play failed", e)
+      );
+    }
+  }
+
+  pause() {
+    this.audio?.pause();
+  }
+
+  remove() {
+    if (this.audio) {
+      this.audio.pause();
+      this.audio.src = "";
+      this.audio = null;
+    }
+  }
+
+  // Stub so native-only listener calls don't crash on web
+  addListener(_event: string, _cb: any) {
+    return { remove: () => {} };
+  }
+}
+
+/** Unified audio player factory — returns WebAudioPlayer on web, native AudioPlayer otherwise */
+function createPlayer(uri: string): any {
+  if (Platform.OS === "web") {
+    console.log("[FiveMinuteMeadow] createPlayer (web)", { uri });
+    return new WebAudioPlayer(uri);
+  }
+  console.log("[FiveMinuteMeadow] createPlayer (native)", { uri });
+  return createAudioPlayer({ uri });
+}
+
+/** Sets audio mode on native only — no-op on web */
+async function setupAudioMode(background: boolean = true) {
+  if (Platform.OS === "web") return;
+  try {
+    await setAudioModeAsync({
+      allowsRecording: false,
+      playsInSilentMode: true,
+      shouldPlayInBackground: background,
+    });
+  } catch (e) {
+    console.warn("[FiveMinuteMeadow] setAudioModeAsync failed", e);
+  }
+}
 
 function getTimeOfDayGradient(): readonly [string, string, string, string] {
   const hour = new Date().getHours();
@@ -489,6 +563,7 @@ function MeadowControls({
   progress,
   soundLabel,
   isSoundMuted,
+  isLoadingAudio,
   insets,
 }: {
   isPaused: boolean;
@@ -498,6 +573,7 @@ function MeadowControls({
   progress: Animated.Value;
   soundLabel: string;
   isSoundMuted: boolean;
+  isLoadingAudio: boolean;
   insets: { bottom: number };
 }) {
   const progressWidth = progress.interpolate({
@@ -659,8 +735,8 @@ export default function FiveMinuteMeadow() {
   const [soundVisible, setSoundVisible] = useState(true);
 
   // Audio state
-  const ambientSoundRef = useRef<AudioPlayer | null>(null);
-  const guidancePlayerRef = useRef<AudioPlayer | null>(null);
+  const ambientSoundRef = useRef<any>(null);
+  const guidancePlayerRef = useRef<any>(null);
   /** @deprecated use guidancePlayerRef */
   const guidanceAudioRef = guidancePlayerRef;
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
@@ -740,7 +816,7 @@ export default function FiveMinuteMeadow() {
         // silent
       }
 
-      const player = createAudioPlayer({ uri: cachedPath });
+      const player = createPlayer(cachedPath);
       player.volume = isSoundMuted ? 0 : 0.9;
       player.play();
       guidancePlayerRef.current = player;
@@ -781,12 +857,29 @@ export default function FiveMinuteMeadow() {
         const { data, error } = await withTimeout(invokePromise, 20000);
 
         if (!error && data?.audioBase64) {
-          const tempPath = `${FileSystem.cacheDirectory}guidance_phase_${phaseNum}_${Date.now()}.mp3`;
-          await FileSystem.writeAsStringAsync(tempPath, data.audioBase64, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-          preloadedAudioRef.current[phaseNum] = tempPath;
-          console.log("[FiveMinuteMeadow] Phase preloaded successfully", { phase: phaseNum, tempPath });
+          let audioUri: string;
+
+          if (Platform.OS === "web") {
+            // Web: create a blob URL from base64
+            console.log("[FiveMinuteMeadow] Creating blob URL for phase", phaseNum);
+            const binary = atob(data.audioBase64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+              bytes[i] = binary.charCodeAt(i);
+            }
+            const blob = new Blob([bytes], { type: "audio/mp3" });
+            audioUri = URL.createObjectURL(blob);
+          } else {
+            // Native: write to temp file
+            const tempPath = `${FileSystem.cacheDirectory}guidance_phase_${phaseNum}_${Date.now()}.mp3`;
+            await FileSystem.writeAsStringAsync(tempPath, data.audioBase64, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+            audioUri = tempPath;
+          }
+
+          preloadedAudioRef.current[phaseNum] = audioUri;
+          console.log("[FiveMinuteMeadow] Phase preloaded successfully", { phase: phaseNum, audioUri });
         } else {
           console.warn("[FiveMinuteMeadow] Preload failed for phase", phaseNum, { error });
         }
@@ -802,31 +895,25 @@ export default function FiveMinuteMeadow() {
   }, []);
 
   const startAudio = useCallback(async (mood: string, sound: string) => {
-    console.log("[FiveMinuteMeadow] Starting audio", { mood, sound });
-    try {
-      await setAudioModeAsync({
-        allowsRecording: false,
-        shouldPlayInBackground: true,
-        playsInSilentMode: true,
-      });
-    } catch (e) {
-      console.warn("[FiveMinuteMeadow] setAudioModeAsync failed", e);
-    }
+    console.log("[FiveMinuteMeadow] Starting audio", { mood, sound, platform: Platform.OS });
+    await setupAudioMode(true);
 
     // Load ambient sound (looping)
     const ambientUrl = AMBIENT_SOUND_URLS[sound];
     if (ambientUrl) {
       try {
         console.log("[FiveMinuteMeadow] Loading ambient sound", { sound, url: ambientUrl });
-        const player = createAudioPlayer({ uri: ambientUrl });
+        const player = createPlayer(ambientUrl);
         player.loop = true;
         player.volume = 0.4;
         player.play();
-        player.addListener("playbackStatusUpdate", (status: any) => {
-          if (status.error) {
-            console.warn("[FiveMinuteMeadow] Ambient playback error:", status.error);
-          }
-        });
+        if (typeof player.addListener === "function") {
+          player.addListener("playbackStatusUpdate", (status: any) => {
+            if (status.error) {
+              console.warn("[FiveMinuteMeadow] Ambient playback error:", status.error);
+            }
+          });
+        }
         ambientSoundRef.current = player;
         console.log("[FiveMinuteMeadow] Ambient sound playing");
       } catch (e) {
@@ -859,12 +946,8 @@ export default function FiveMinuteMeadow() {
     if (!url) return;
 
     try {
-      await setAudioModeAsync({
-        allowsRecording: false,
-        playsInSilentMode: true,
-        shouldPlayInBackground: false,
-      });
-      const player = createAudioPlayer({ uri: url });
+      await setupAudioMode(false);
+      const player = createPlayer(url);
       player.volume = 0.5;
       player.play();
       ambientSoundRef.current = player;
@@ -984,6 +1067,15 @@ export default function FiveMinuteMeadow() {
     };
   }, [phase]);
 
+  // Trigger preload when mood is selected
+  const handleSelectMood = useCallback((mood: string) => {
+    setSelectedMood(mood);
+    if (mood && mood !== "SIT WITH ME") {
+      console.log("[FiveMinuteMeadow] Mood selected — triggering preload", { mood });
+      preloadAllPhases(mood);
+    }
+  }, [preloadAllPhases]);
+
   const handleBegin = useCallback(() => {
     // Stop any sound preview before starting
     if (previewTimeoutRef.current) {
@@ -1089,7 +1181,7 @@ export default function FiveMinuteMeadow() {
         <MoodSelector
           selectedMood={selectedMood}
           selectedSound={selectedSound}
-          onSelectMood={setSelectedMood}
+          onSelectMood={handleSelectMood}
           onSelectSound={handleSelectSound}
           onBegin={handleBegin}
           insets={insets}
@@ -1359,6 +1451,14 @@ const styles = StyleSheet.create({
     fontFamily: "Karla_700Bold",
     color: "#fff",
     letterSpacing: 0.3,
+  },
+  beginButtonInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  beginSpinner: {
+    marginRight: 4,
   },
 
   // After screen
