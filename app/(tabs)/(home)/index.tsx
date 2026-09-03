@@ -193,17 +193,31 @@ function FadeInView({ children, delay = 0 }: { children: React.ReactNode; delay?
 
 const LOG_TYPES: LogType[] = ["Feed", "Sleep", "Diaper"];
 
+const LOG_TYPE_META: Record<LogType, { emoji: string; label: string }> = {
+  Feed: { emoji: "🍼", label: "Feed" },
+  Sleep: { emoji: "😴", label: "Sleep" },
+  Diaper: { emoji: "👶", label: "Diaper" },
+};
+
 function BabyCard({ baby }: { baby: Baby }) {
   const { logs, addLog } = useBabies();
   const [loggedType, setLoggedType] = useState<LogType | null>(null);
 
   const babyLogs = logs.filter((l) => l.babyId === baby.id);
-  const lastLog = babyLogs.length > 0 ? babyLogs[babyLogs.length - 1] : null;
 
-  const lastLogTime = lastLog
-    ? new Date(lastLog.time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-    : null;
-  const lastLogText = lastLog ? `Last: ${lastLog.type} at ${lastLogTime}` : null;
+  const lastFeed = babyLogs.filter((l) => l.type === "Feed").at(-1);
+  const lastSleep = babyLogs.filter((l) => l.type === "Sleep").at(-1);
+  const lastDiaper = babyLogs.filter((l) => l.type === "Diaper").at(-1);
+
+  const formatTime = (log: typeof lastFeed) =>
+    log
+      ? new Date(log.time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+      : "—";
+
+  const feedTime = formatTime(lastFeed);
+  const sleepTime = formatTime(lastSleep);
+  const diaperTime = formatTime(lastDiaper);
+
   const dobText = baby.dob ? `Born ${baby.dob}` : null;
 
   const handleLog = useCallback(
@@ -239,13 +253,28 @@ function BabyCard({ baby }: { baby: Baby }) {
         ))}
       </View>
       {loggedType !== null && (
-        <Text style={styles.loggedConfirm}>
-          ✓ Logged
-        </Text>
+        <Text style={styles.loggedConfirm}>✓ Logged</Text>
       )}
-      {loggedType === null && lastLogText !== null && (
-        <Text style={styles.lastLogText}>{lastLogText}</Text>
-      )}
+      {/* Per-type last log status chips */}
+      <View style={styles.logStatusRow}>
+        <View style={styles.logStatusChip}>
+          <Text style={styles.logStatusEmoji}>{LOG_TYPE_META.Feed.emoji}</Text>
+          <Text style={styles.logStatusLabel}>Feed</Text>
+          <Text style={styles.logStatusTime}>{feedTime}</Text>
+        </View>
+        <View style={styles.logStatusDivider} />
+        <View style={styles.logStatusChip}>
+          <Text style={styles.logStatusEmoji}>{LOG_TYPE_META.Sleep.emoji}</Text>
+          <Text style={styles.logStatusLabel}>Sleep</Text>
+          <Text style={styles.logStatusTime}>{sleepTime}</Text>
+        </View>
+        <View style={styles.logStatusDivider} />
+        <View style={styles.logStatusChip}>
+          <Text style={styles.logStatusEmoji}>{LOG_TYPE_META.Diaper.emoji}</Text>
+          <Text style={styles.logStatusLabel}>Diaper</Text>
+          <Text style={styles.logStatusTime}>{diaperTime}</Text>
+        </View>
+      </View>
     </View>
   );
 }
@@ -689,12 +718,44 @@ const styles = StyleSheet.create({
     fontFamily: "Karla_700Bold",
     color: COLORS.primary,
     marginTop: 2,
+    marginBottom: 6,
   },
-  lastLogText: {
-    fontSize: 12,
-    fontFamily: "Karla_400Regular",
+
+  // Per-type log status row
+  logStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+    backgroundColor: COLORS.surfaceSecondary,
+    borderRadius: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+  },
+  logStatusChip: {
+    flex: 1,
+    alignItems: "center",
+    gap: 2,
+  },
+  logStatusEmoji: {
+    fontSize: 13,
+  },
+  logStatusLabel: {
+    fontSize: 10,
+    fontFamily: "Karla_700Bold",
     color: COLORS.textTertiary,
-    marginTop: 2,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  logStatusTime: {
+    fontSize: 11,
+    fontFamily: "Karla_400Regular",
+    color: COLORS.textSecondary,
+  },
+  logStatusDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: COLORS.border,
+    marginHorizontal: 4,
   },
 
   // Empty state
