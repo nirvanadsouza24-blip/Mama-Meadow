@@ -7,6 +7,8 @@ import {
   Pressable,
   ScrollView,
   Animated,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import type { MeadowEvent } from "./MeadowMemoryModal";
 
@@ -184,19 +186,9 @@ interface Props {
 }
 
 export function WalkThroughMeadowModal({ visible, events, onClose }: Props) {
-  const slideAnim = useRef(new Animated.Value(80)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
     if (visible) {
       console.log("[WalkThroughMeadowModal] Modal opened", { eventCount: events.length });
-      Animated.parallel([
-        Animated.timing(slideAnim, { toValue: 0, duration: 360, useNativeDriver: true }),
-        Animated.timing(opacityAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-      ]).start();
-    } else {
-      slideAnim.setValue(80);
-      opacityAnim.setValue(0);
     }
   }, [visible]);
 
@@ -208,15 +200,22 @@ export function WalkThroughMeadowModal({ visible, events, onClose }: Props) {
   return (
     <Modal
       visible={visible}
-      animationType="none"
+      animationType="slide"
       transparent
       onRequestClose={() => {
         console.log("[WalkThroughMeadowModal] Close via back button");
         onClose();
       }}
     >
-      <Animated.View style={[styles.overlay, { opacity: opacityAnim }]}>
-        <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        {/* Backdrop */}
+        <Pressable style={styles.backdrop} onPress={onClose} />
+
+        {/* Sheet */}
+        <View style={styles.sheet}>
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerText}>
@@ -260,17 +259,20 @@ export function WalkThroughMeadowModal({ visible, events, onClose }: Props) {
               ))}
             </ScrollView>
           )}
-        </Animated.View>
-      </Animated.View>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  keyboardAvoid: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "flex-end",
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
   sheet: {
     backgroundColor: COLORS.cream,

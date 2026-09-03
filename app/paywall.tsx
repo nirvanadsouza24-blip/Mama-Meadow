@@ -625,10 +625,7 @@ export default function PaywallScreen() {
 
                 {/* Legal Text - Required by App Store */}
                 <Text style={styles.legalText}>
-                  Payment will be charged to your{" "}
-                  {Platform.OS === "ios" ? "Apple ID" : "Google Play"} account.
-                  Subscription automatically renews unless canceled at least 24 hours
-                  before the end of the current period.{" "}
+                  Payment will be charged to your Apple ID account at confirmation of purchase. Subscription automatically renews unless canceled at least 24 hours before the end of the current period. Manage or cancel your subscription in your Apple ID Account Settings.{" "}
                   <Text
                     style={styles.legalLink}
                     onPress={() => {

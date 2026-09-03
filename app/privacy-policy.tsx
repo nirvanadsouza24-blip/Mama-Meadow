@@ -20,7 +20,7 @@ export default function PrivacyPolicyScreen() {
         <Text style={styles.title}>Privacy Policy</Text>
       </View>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.updated}>Last updated: August 24, 2026</Text>
+        <Text style={styles.updated}>Last updated: June 2025</Text>
 
         <Text style={styles.body}>
           Mama Meadow is a motherhood companion designed to help mothers care for, track, and preserve memories of their children.
@@ -53,7 +53,7 @@ export default function PrivacyPolicyScreen() {
 
         <Text style={styles.heading}>Data Deletion</Text>
         <Text style={styles.body}>
-          Users may contact us to request deletion of their personal information and associated data, subject to any legal or operational requirements.
+          Users can delete all their data directly within the app via Settings → Privacy & Security → Delete all my data. Users may also contact us at nirvanadsouza24@gmail.com to request deletion of their account and any associated data, subject to any legal or operational requirements.
         </Text>
 
         <Text style={styles.heading}>Third-Party Services</Text>

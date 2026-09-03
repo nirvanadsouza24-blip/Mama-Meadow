@@ -53,16 +53,16 @@ function SubscriptionRedirect() {
       if (cancelled) return;
       if (!done) return;
       const onPaywall = pathname === "/paywall";
-      const onPrivacyPolicy = pathname === "/privacy-policy";
-      if (onPaywall || onPrivacyPolicy) return;
+      const onPrivacy = pathname === "/privacy-policy" || pathname.includes("/privacy");
+      if (onPaywall || onPrivacy) return;
       if (!isSubscribed && !paywallSkipped) {
         router.replace("/paywall");
       }
     }).catch(() => {
       if (cancelled) return;
       const onPaywall = pathname === "/paywall";
-      const onPrivacyPolicy = pathname === "/privacy-policy";
-      if (onPaywall || onPrivacyPolicy) return;
+      const onPrivacy = pathname === "/privacy-policy" || pathname.includes("/privacy");
+      if (onPaywall || onPrivacy) return;
       if (!isSubscribed && !paywallSkipped) {
         router.replace("/paywall");
       }

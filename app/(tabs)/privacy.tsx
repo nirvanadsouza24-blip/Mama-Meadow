@@ -358,7 +358,7 @@ export default function PrivacyScreen() {
                 <Text style={{ fontSize: 18 }}>✉️</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontFamily: "Karla_700Bold", color: "#888888" }}>
+                <Text style={{ fontSize: 15, fontFamily: "Karla_700Bold", color: COLORS.danger }}>
                   Request full account deletion
                 </Text>
                 <Text style={{ fontSize: 12, fontFamily: "Karla_400Regular", color: COLORS.textTertiary, marginTop: 2 }}>
