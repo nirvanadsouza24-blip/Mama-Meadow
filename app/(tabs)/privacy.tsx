@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,10 +7,12 @@ import {
   Animated,
   Alert,
   Linking,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "@/app/integrations/supabase/client";
 
 const COLORS = {
   background: "#FAF7F2",
@@ -90,6 +92,7 @@ function SectionCard({ children }: { children: React.ReactNode }) {
 
 export default function PrivacyScreen() {
   const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
 
   const handleExport = () => {
     console.log("[PrivacyScreen] Export data button pressed");
@@ -99,8 +102,8 @@ export default function PrivacyScreen() {
   const handleDeleteAll = () => {
     console.log("[PrivacyScreen] Delete all data button pressed");
     Alert.alert(
-      "Delete all data?",
-      "This will permanently remove all your Mama Meadow data from this device. This cannot be undone.",
+      "Delete all my data?",
+      "This will permanently delete all your Mama Meadow data — including meadow memories and events stored in the cloud. This cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -108,15 +111,56 @@ export default function PrivacyScreen() {
           style: "destructive",
           onPress: async () => {
             console.log("[PrivacyScreen] Confirmed delete all data");
+            setDeleting(true);
             try {
+              // 1. Get device_id used to scope cloud data
+              const deviceId = await AsyncStorage.getItem("mama_meadow_device_id");
+              console.log("[PrivacyScreen] Deleting cloud data for device_id:", deviceId);
+
+              // 2. Delete Supabase cloud data scoped to this device
+              if (deviceId) {
+                const [eventsResult, memoriesResult] = await Promise.all([
+                  (supabase as any)
+                    .from("meadow_events")
+                    .delete()
+                    .eq("device_id", deviceId),
+                  (supabase as any)
+                    .from("meadow_memories")
+                    .delete()
+                    .eq("device_id", deviceId),
+                ]);
+                if (eventsResult.error) {
+                  console.warn("[PrivacyScreen] Error deleting meadow_events:", eventsResult.error);
+                } else {
+                  console.log("[PrivacyScreen] meadow_events deleted from cloud");
+                }
+                if (memoriesResult.error) {
+                  console.warn("[PrivacyScreen] Error deleting meadow_memories:", memoriesResult.error);
+                } else {
+                  console.log("[PrivacyScreen] meadow_memories deleted from cloud");
+                }
+              }
+
+              // 3. Delete all local AsyncStorage data
               const allKeys = await AsyncStorage.getAllKeys();
               const mamaMeadowKeys = allKeys.filter((k) => k.startsWith("@mamameadow/"));
-              if (mamaMeadowKeys.length > 0) {
-                await AsyncStorage.multiRemove(mamaMeadowKeys);
+              const extraKeys = ["mama_meadow_device_id", "mama_meadow_onboarding_complete"];
+              const keysToRemove = [...mamaMeadowKeys, ...extraKeys];
+              if (keysToRemove.length > 0) {
+                await AsyncStorage.multiRemove(keysToRemove);
               }
-              Alert.alert("Done", "All your data has been deleted from this device.");
-            } catch {
-              Alert.alert("Error", "Could not delete data. Please try again.");
+              console.log("[PrivacyScreen] Local AsyncStorage data cleared");
+
+              setDeleting(false);
+              Alert.alert(
+                "All data deleted",
+                "Your Mama Meadow data has been permanently deleted from this device and our servers.",
+                [{ text: "OK", onPress: () => router.replace("/onboarding") }]
+              );
+            } catch (err) {
+              console.error("[PrivacyScreen] Error during data deletion:", err);
+              setDeleting(false);
+              Alert.alert("Error", "Could not delete all data. Please try again.");
             }
           },
         },
@@ -244,7 +288,7 @@ export default function PrivacyScreen() {
           <Text style={{ fontSize: 13, fontFamily: "Karla_700Bold", color: COLORS.textTertiary, textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 10 }}>
             Delete Data
           </Text>
-          <AnimatedPressable onPress={handleDeleteAll} scaleValue={0.975}>
+          <AnimatedPressable onPress={deleting ? undefined : handleDeleteAll} scaleValue={0.975}>
             <View style={{
               backgroundColor: COLORS.dangerMuted,
               borderRadius: 14,
@@ -255,6 +299,7 @@ export default function PrivacyScreen() {
               borderWidth: 1,
               borderColor: "rgba(217, 79, 79, 0.15)",
               marginBottom: 28,
+              opacity: deleting ? 0.6 : 1,
             }}>
               <View style={{
                 width: 40,
@@ -264,14 +309,17 @@ export default function PrivacyScreen() {
                 justifyContent: "center",
                 alignItems: "center",
               }}>
-                <Text style={{ fontSize: 18 }}>🗑️</Text>
+                {deleting
+                  ? <ActivityIndicator size="small" color={COLORS.danger} />
+                  : <Text style={{ fontSize: 18 }}>🗑️</Text>
+                }
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 15, fontFamily: "Karla_700Bold", color: COLORS.danger }}>
-                  Delete all my data
+                  {deleting ? "Deleting…" : "Delete all my data"}
                 </Text>
                 <Text style={{ fontSize: 13, fontFamily: "Karla_400Regular", color: COLORS.textSecondary, marginTop: 1 }}>
-                  Permanently removes all app data
+                  Removes all data from device and cloud
                 </Text>
               </View>
             </View>

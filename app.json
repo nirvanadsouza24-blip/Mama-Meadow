@@ -26,7 +26,13 @@
         "foregroundImage": "./assets/images/mama.png",
         "backgroundColor": "#FFFFFF"
       },
-      "package": "com.mamameadow.app"
+      "package": "com.mamameadow.app",
+      "permissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "favicon": "./assets/images/newly.png",
@@ -37,7 +43,14 @@
       "expo-router",
       "expo-web-browser",
       "expo-secure-store",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Mama Meadow uses your photo library to add photos of your baby and capture monthly milestones.",
+          "cameraPermission": "Mama Meadow uses your camera to capture photos of your baby's milestones."
+        }
+      ]
     ],
     "scheme": "mamameadow",
     "experiments": {
