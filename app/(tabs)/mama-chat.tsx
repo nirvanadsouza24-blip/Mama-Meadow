@@ -230,6 +230,7 @@ export default function MamaChatScreen() {
   const [quickRepliesUsed, setQuickRepliesUsed] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
+  const [messagesRemaining, setMessagesRemaining] = useState<number | null>(null);
   const deviceIdRef = useRef<string | null>(null);
 
   const scrollToBottom = useCallback(() => {
@@ -331,15 +332,31 @@ export default function MamaChatScreen() {
         }
 
         const json = await response.json();
-        console.log("[MamaChat] AI reply received, message_id:", json.message_id);
+        console.log("[MamaChat] Edge function response received:", { limit_reached: json.limit_reached, message_id: json.message_id, messages_remaining: json.messages_remaining });
 
-        const appMsg: Message = {
-          id: json.message_id ?? `app_${Date.now()}`,
-          role: "app",
-          text: json.reply,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, appMsg]);
+        if (json.limit_reached) {
+          console.log("[MamaChat] Daily message limit reached — messages_remaining:", json.messages_remaining);
+          setMessagesRemaining(0);
+          const limitMsg: Message = {
+            id: `limit_${Date.now()}`,
+            role: "app",
+            text: "You've reached your 30 message limit for today, Mama 🌸 Your limit resets at midnight. Rest well tonight — I'll be here for you tomorrow 💛",
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, limitMsg]);
+        } else {
+          console.log("[MamaChat] AI reply received, message_id:", json.message_id, "messages_remaining:", json.messages_remaining);
+          if (typeof json.messages_remaining === "number") {
+            setMessagesRemaining(json.messages_remaining);
+          }
+          const appMsg: Message = {
+            id: json.message_id ?? `app_${Date.now()}`,
+            role: "app",
+            text: json.reply,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, appMsg]);
+        }
       } catch (err) {
         console.log("[MamaChat] Failed to get AI response:", err);
         const errorMsg: Message = {
@@ -458,24 +475,35 @@ export default function MamaChatScreen() {
             {isTyping && <TypingIndicator />}
           </ScrollView>
 
+          {/* Remaining messages pill */}
+          {messagesRemaining !== null && messagesRemaining <= 10 && (
+            <View style={styles.remainingPillWrap}>
+              <Text style={styles.remainingPillText}>
+                {messagesRemaining}
+                {" messages left today"}
+              </Text>
+            </View>
+          )}
+
           {/* Input bar */}
           <View style={styles.inputBar}>
             <TextInput
-              style={styles.textInput}
+              style={[styles.textInput, messagesRemaining === 0 && styles.textInputDisabled]}
               value={inputText}
               onChangeText={setInputText}
-              placeholder="Share how you're feeling…"
+              placeholder={messagesRemaining === 0 ? "Daily limit reached — resets at midnight 🌙" : "Share how you're feeling…"}
               placeholderTextColor={COLORS.textTertiary}
               multiline
               maxLength={500}
               returnKeyType="send"
               onSubmitEditing={handleSend}
               blurOnSubmit={false}
+              editable={messagesRemaining !== 0}
             />
             <Pressable
-              style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+              style={[styles.sendButton, (!inputText.trim() || messagesRemaining === 0) && styles.sendButtonDisabled]}
               onPress={handleSend}
-              disabled={!inputText.trim() || isTyping}
+              disabled={!inputText.trim() || isTyping || messagesRemaining === 0}
             >
               <Text style={styles.sendButtonText}>🌿</Text>
             </Pressable>
@@ -728,6 +756,24 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: 3.5,
     backgroundColor: COLORS.textTertiary,
+  },
+
+  // Remaining messages pill
+  remainingPillWrap: {
+    alignItems: "center",
+    paddingBottom: 6,
+    paddingTop: 2,
+  },
+  remainingPillText: {
+    fontSize: 12,
+    fontFamily: "Karla_400Regular",
+    color: "#B89880",
+  },
+
+  // Disabled text input
+  textInputDisabled: {
+    opacity: 0.55,
+    backgroundColor: "rgba(44, 26, 14, 0.04)",
   },
 
   // Input bar
