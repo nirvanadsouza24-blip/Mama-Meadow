@@ -8,6 +8,7 @@ import {
   Alert,
   Linking,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -88,6 +89,8 @@ function SectionCard({ children }: { children: React.ReactNode }) {
 }
 
 export default function PrivacyScreen() {
+  const router = useRouter();
+
   const handleExport = () => {
     console.log("[PrivacyScreen] Export data button pressed");
     Alert.alert("Coming soon", "Data export will be available in a future update.");
@@ -123,7 +126,7 @@ export default function PrivacyScreen() {
 
   const handlePrivacyPolicy = () => {
     console.log("[PrivacyScreen] Privacy Policy link pressed");
-    Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/privacy");
+    router.push("/privacy-policy");
   };
 
   const handleTerms = () => {

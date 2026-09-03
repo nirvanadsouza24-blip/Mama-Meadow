@@ -451,7 +451,7 @@ export default function PaywallScreen() {
                   style={styles.prominentLinkButton}
                   onPress={() => {
                     console.log('[Paywall] Privacy Policy link tapped (in-scroll)');
-                    Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/privacy");
+                    router.push("/privacy-policy");
                   }}
                 >
                   <Text style={styles.prominentLinkText}>Privacy Policy</Text>
@@ -481,7 +481,7 @@ export default function PaywallScreen() {
                     style={styles.prominentLinkButton}
                     onPress={() => {
                       console.log('[Paywall] Privacy Policy link tapped (web)');
-                      Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/privacy");
+                      router.push("/privacy-policy");
                     }}
                   >
                     <Text style={styles.prominentLinkText}>Privacy Policy</Text>
@@ -536,7 +536,10 @@ export default function PaywallScreen() {
                   Preview mode — purchases available in the mobile app.{" "}
                   <Text
                     style={styles.legalLink}
-                    onPress={() => Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/privacy")}
+                    onPress={() => {
+                      console.log('[Paywall] Privacy Policy link tapped (web legal text)');
+                      router.push("/privacy-policy");
+                    }}
                   >
                     Privacy Policy
                   </Text>
@@ -557,7 +560,7 @@ export default function PaywallScreen() {
                     style={styles.prominentLinkButton}
                     onPress={() => {
                       console.log('[Paywall] Privacy Policy link tapped');
-                      Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/privacy");
+                      router.push("/privacy-policy");
                     }}
                   >
                     <Text style={styles.prominentLinkText}>Privacy Policy</Text>
@@ -628,7 +631,10 @@ export default function PaywallScreen() {
                   before the end of the current period.{" "}
                   <Text
                     style={styles.legalLink}
-                    onPress={() => Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/privacy")}
+                    onPress={() => {
+                      console.log('[Paywall] Privacy Policy link tapped (native legal text)');
+                      router.push("/privacy-policy");
+                    }}
                   >
                     Privacy Policy
                   </Text>
