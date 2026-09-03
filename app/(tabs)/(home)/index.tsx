@@ -19,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useBabies, Baby, LogType } from "@/contexts/BabiesContext";
 import { MeadowSection } from "@/components/meadow/MeadowSection";
+import { AddMeadowEventModal } from "@/components/meadow/AddMeadowEventModal";
 
 const { width: SW, height: SH } = Dimensions.get("window");
 
@@ -375,6 +376,14 @@ export default function HomeScreen() {
   const { isSubscribed } = useSubscription();
   const { babies } = useBabies();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showMeadowAddModal, setShowMeadowAddModal] = useState(false);
+  const [meadowReloadKey, setMeadowReloadKey] = useState(0);
+
+  const handleMeadowSaved = useCallback(() => {
+    console.log("[HomeScreen] Meadow event saved — triggering MeadowSection reload");
+    setShowMeadowAddModal(false);
+    setMeadowReloadKey((k) => k + 1);
+  }, []);
 
   const handleYouTab = () => {
     console.log("[HomeScreen] You tab button pressed — navigating to mother screen");
@@ -470,7 +479,13 @@ export default function HomeScreen() {
 
         {/* Your Little Meadow */}
         <FadeInView delay={200}>
-          <MeadowSection />
+          <MeadowSection
+            onAddPress={() => {
+              console.log("[HomeScreen] MeadowSection onAddPress — opening AddMeadowEventModal");
+              setShowMeadowAddModal(true);
+            }}
+            reloadKey={meadowReloadKey}
+          />
         </FadeInView>
 
         {/* You tab shortcut */}
@@ -497,6 +512,14 @@ export default function HomeScreen() {
       </ScrollView>
 
       <AddBabyModal visible={showAddModal} onClose={handleCloseAddModal} />
+      <AddMeadowEventModal
+        visible={showMeadowAddModal}
+        onClose={() => {
+          console.log("[HomeScreen] AddMeadowEventModal closed");
+          setShowMeadowAddModal(false);
+        }}
+        onSaved={handleMeadowSaved}
+      />
     </SafeAreaView>
   );
 }

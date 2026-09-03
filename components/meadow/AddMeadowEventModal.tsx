@@ -185,8 +185,8 @@ export function AddMeadowEventModal({ visible, onClose, onSaved }: Props) {
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <Animated.View style={[styles.overlay, { opacity: opacityAnim }]}>
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <Animated.View style={[styles.overlay, { opacity: opacityAnim }]} pointerEvents="box-none">
+          <TouchableWithoutFeedback onPress={() => { Keyboard.dismiss(); handleClose(); }}>
             <View style={styles.overlayTouchable} />
           </TouchableWithoutFeedback>
           <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>

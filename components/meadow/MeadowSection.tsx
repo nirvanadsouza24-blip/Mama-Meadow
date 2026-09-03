@@ -202,7 +202,12 @@ function FloatingMeadowElement({
   );
 }
 
-export function MeadowSection() {
+interface MeadowSectionProps {
+  onAddPress?: () => void;
+  reloadKey?: number;
+}
+
+export function MeadowSection({ onAddPress, reloadKey }: MeadowSectionProps = {}) {
   const router = useRouter();
   const { isSubscribed } = useSubscription();
   const { babies } = useBabies();
@@ -248,6 +253,13 @@ export function MeadowSection() {
     loadEvents();
   }, [loadEvents]);
 
+  useEffect(() => {
+    if (reloadKey !== undefined && reloadKey > 0) {
+      console.log("[MeadowSection] reloadKey changed — reloading events", { reloadKey });
+      loadEvents();
+    }
+  }, [reloadKey]);
+
   const mood = determineMood(events);
   const moodColors = MOOD_COLORS[mood];
   const meadowAge = calculateMeadowAge(events, babies);
@@ -269,8 +281,12 @@ export function MeadowSection() {
 
   const handleAddPress = useCallback(() => {
     console.log("[MeadowSection] + Add to Meadow button pressed");
-    setShowAddModal(true);
-  }, []);
+    if (onAddPress) {
+      onAddPress();
+    } else {
+      setShowAddModal(true);
+    }
+  }, [onAddPress]);
 
   const handleWalkPress = useCallback(() => {
     console.log("[MeadowSection] Walk Through My Meadow button pressed");
@@ -368,15 +384,17 @@ export function MeadowSection() {
         )}
       </View>
 
-      {/* Modals */}
-      <AddMeadowEventModal
-        visible={showAddModal}
-        onClose={() => {
-          console.log("[MeadowSection] AddMeadowEventModal closed");
-          setShowAddModal(false);
-        }}
-        onSaved={handleSaved}
-      />
+      {/* Modals — only render inline when no external onAddPress handler */}
+      {!onAddPress && (
+        <AddMeadowEventModal
+          visible={showAddModal}
+          onClose={() => {
+            console.log("[MeadowSection] AddMeadowEventModal closed");
+            setShowAddModal(false);
+          }}
+          onSaved={handleSaved}
+        />
+      )}
 
       <MeadowMemoryModal
         visible={selectedEvent !== null}
