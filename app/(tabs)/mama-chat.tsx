@@ -11,6 +11,7 @@ import {
   Platform,
   Dimensions,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -231,6 +232,7 @@ export default function MamaChatScreen() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
   const [messagesRemaining, setMessagesRemaining] = useState<number | null>(null);
+  const [showLimitPaywall, setShowLimitPaywall] = useState(false);
   const deviceIdRef = useRef<string | null>(null);
 
   const scrollToBottom = useCallback(() => {
@@ -337,10 +339,12 @@ export default function MamaChatScreen() {
         if (json.limit_reached) {
           console.log("[MamaChat] Daily message limit reached — messages_remaining:", json.messages_remaining);
           setMessagesRemaining(0);
+          setShowLimitPaywall(true);
+          console.log("[MamaChat] Showing limit paywall modal");
           const limitMsg: Message = {
             id: `limit_${Date.now()}`,
             role: "app",
-            text: "You've reached your 30 message limit for today, Mama 🌸 Your limit resets at midnight. Rest well tonight — I'll be here for you tomorrow 💛",
+            text: "You've reached your 80 message limit for today, Mama 🌸 Your limit resets at midnight. Rest well tonight — I'll be here for you tomorrow 💛",
             timestamp: new Date(),
           };
           setMessages((prev) => [...prev, limitMsg]);
@@ -476,7 +480,7 @@ export default function MamaChatScreen() {
           </ScrollView>
 
           {/* Remaining messages pill */}
-          {messagesRemaining !== null && messagesRemaining <= 10 && (
+          {messagesRemaining !== null && messagesRemaining <= 15 && (
             <View style={styles.remainingPillWrap}>
               <Text style={styles.remainingPillText}>
                 {messagesRemaining}
@@ -510,6 +514,77 @@ export default function MamaChatScreen() {
           </View>
         </KeyboardAvoidingView>
       )}
+
+      {/* Daily limit paywall modal */}
+      <Modal
+        visible={showLimitPaywall}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => {
+          console.log("[MamaChat] Limit paywall modal dismissed via back gesture");
+          setShowLimitPaywall(false);
+        }}
+      >
+        <View style={styles.paywallModal}>
+          {/* Close button */}
+          <Pressable
+            style={styles.paywallCloseBtn}
+            onPress={() => {
+              console.log("[MamaChat] Limit paywall close button pressed");
+              setShowLimitPaywall(false);
+            }}
+          >
+            <Text style={styles.paywallCloseBtnText}>✕</Text>
+          </Pressable>
+
+          {/* Emoji header */}
+          <Text style={styles.paywallEmoji}>🌸</Text>
+
+          {/* Title */}
+          <Text style={styles.paywallTitle}>{"You've reached your daily limit"}</Text>
+
+          {/* Subtitle */}
+          <Text style={styles.paywallSubtitle}>
+            {"Upgrade to continue chatting with your caring companion"}
+          </Text>
+
+          {/* Feature list */}
+          <View style={styles.paywallFeatureList}>
+            {[
+              "80 messages per day included",
+              "Unlimited access coming soon",
+              "Priority support",
+            ].map((feature) => (
+              <View key={feature} style={styles.paywallFeatureRow}>
+                <Text style={styles.paywallFeatureCheck}>✓</Text>
+                <Text style={styles.paywallFeatureText}>{feature}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Upgrade button */}
+          <Pressable
+            style={styles.paywallUpgradeBtn}
+            onPress={() => {
+              console.log("[MamaChat] Upgrade Now button pressed — navigating to /paywall");
+              setShowLimitPaywall(false);
+              router.push("/paywall");
+            }}
+          >
+            <Text style={styles.paywallUpgradeBtnText}>Upgrade Now</Text>
+          </Pressable>
+
+          {/* Maybe later */}
+          <Pressable
+            onPress={() => {
+              console.log("[MamaChat] Maybe Later pressed — closing limit paywall modal");
+              setShowLimitPaywall(false);
+            }}
+          >
+            <Text style={styles.paywallMaybeLater}>Maybe Later</Text>
+          </Pressable>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -896,5 +971,98 @@ const styles = StyleSheet.create({
     fontFamily: "Karla_700Bold",
     color: "#fff",
     letterSpacing: 0.2,
+  },
+
+  // Limit paywall modal
+  paywallModal: {
+    flex: 1,
+    backgroundColor: "#FAF7F2",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    paddingBottom: 48,
+  },
+  paywallCloseBtn: {
+    position: "absolute",
+    top: 20,
+    right: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(44, 26, 14, 0.07)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  paywallCloseBtnText: {
+    fontSize: 14,
+    color: "#7A5C44",
+    fontFamily: "Karla_400Regular",
+  },
+  paywallEmoji: {
+    fontSize: 56,
+    marginBottom: 20,
+  },
+  paywallTitle: {
+    fontSize: 24,
+    fontFamily: "Fraunces_700Bold",
+    color: "#2C1A0E",
+    textAlign: "center",
+    letterSpacing: -0.3,
+    marginBottom: 12,
+  },
+  paywallSubtitle: {
+    fontSize: 15,
+    fontFamily: "Karla_400Regular",
+    color: "#7A5C44",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  paywallFeatureList: {
+    alignSelf: "stretch",
+    marginBottom: 36,
+    gap: 14,
+  },
+  paywallFeatureRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  paywallFeatureCheck: {
+    fontSize: 15,
+    color: "#4A7C59",
+    fontFamily: "Karla_700Bold",
+    width: 20,
+  },
+  paywallFeatureText: {
+    fontSize: 15,
+    fontFamily: "Karla_400Regular",
+    color: "#2C1A0E",
+  },
+  paywallUpgradeBtn: {
+    backgroundColor: "#4A7C59",
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignSelf: "stretch",
+    alignItems: "center",
+    marginBottom: 16,
+    shadowColor: "#4A7C59",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  paywallUpgradeBtnText: {
+    fontSize: 16,
+    fontFamily: "Karla_700Bold",
+    color: "#fff",
+    letterSpacing: 0.2,
+  },
+  paywallMaybeLater: {
+    fontSize: 14,
+    fontFamily: "Karla_400Regular",
+    color: "#B89880",
+    textDecorationLine: "underline",
+    paddingVertical: 8,
   },
 });
