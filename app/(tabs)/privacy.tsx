@@ -168,6 +168,13 @@ export default function PrivacyScreen() {
     );
   };
 
+  const handleAccountDeletionEmail = () => {
+    console.log("[PrivacyScreen] Request full account deletion pressed");
+    Linking.openURL(
+      "mailto:nirvanadsouza24@gmail.com?subject=Account%20Deletion%20Request&body=Please%20delete%20my%20Mama%20Meadow%20account%20and%20all%20associated%20data."
+    );
+  };
+
   const handlePrivacyPolicy = () => {
     console.log("[PrivacyScreen] Privacy Policy link pressed");
     router.push("/privacy-policy");
@@ -326,8 +333,46 @@ export default function PrivacyScreen() {
           </AnimatedPressable>
         </FadeInItem>
 
-        {/* Links */}
+        {/* Account Deletion */}
         <FadeInItem index={4}>
+          <AnimatedPressable onPress={handleAccountDeletionEmail} scaleValue={0.985}>
+            <View style={{
+              backgroundColor: COLORS.surface,
+              borderRadius: 14,
+              padding: 16,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+              borderWidth: 1,
+              borderColor: COLORS.border,
+              marginBottom: 28,
+            }}>
+              <View style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                backgroundColor: COLORS.surfaceSecondary,
+                justifyContent: "center",
+                alignItems: "center",
+              }}>
+                <Text style={{ fontSize: 18 }}>✉️</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontFamily: "Karla_700Bold", color: "#888888" }}>
+                  Request full account deletion
+                </Text>
+                <Text style={{ fontSize: 12, fontFamily: "Karla_400Regular", color: COLORS.textTertiary, marginTop: 2 }}>
+                  Email us to permanently delete your account
+                </Text>
+              </View>
+              <Text style={{ fontSize: 20, color: COLORS.textTertiary }}>›</Text>
+            </View>
+          </AnimatedPressable>
+        </FadeInItem>
+
+        {/* Links */}
+        <FadeInItem index={5}>
+
           <SectionCard>
             <AnimatedPressable onPress={handlePrivacyPolicy} scaleValue={0.985}>
               <View style={{ padding: 16, flexDirection: "row", alignItems: "center", gap: 12 }}>
