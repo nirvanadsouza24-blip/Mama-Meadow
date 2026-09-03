@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/app/integrations/supabase/client";
+import { useBabies } from "@/contexts/BabiesContext";
 
 const COLORS = {
   background: "#FAF7F2",
@@ -54,6 +55,7 @@ interface Props {
 }
 
 export function AddMeadowEventModal({ visible, onClose, onSaved }: Props) {
+  const { babies } = useBabies();
   const slideAnim = useRef(new Animated.Value(80)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -103,6 +105,7 @@ export function AddMeadowEventModal({ visible, onClose, onSaved }: Props) {
     setSaving(true);
     try {
       const deviceId = await AsyncStorage.getItem("mama_meadow_device_id");
+      const babyId = babies[0]?.id ?? null;
       const today = new Date().toISOString().split("T")[0];
 
       const selectedOption = EVENT_TYPE_OPTIONS.find((o) => o.type === selectedType);
@@ -110,6 +113,7 @@ export function AddMeadowEventModal({ visible, onClose, onSaved }: Props) {
 
       console.log("[AddMeadowEventModal] Inserting meadow_event to Supabase", {
         device_id: deviceId,
+        baby_id: babyId,
         event_type: selectedType,
         title: title.trim(),
         event_date: today,
@@ -119,7 +123,7 @@ export function AddMeadowEventModal({ visible, onClose, onSaved }: Props) {
         .from("meadow_events")
         .insert({
           device_id: deviceId ?? "unknown",
-          baby_id: null,
+          baby_id: babyId,
           event_type: selectedType,
           emoji,
           title: title.trim(),
@@ -168,7 +172,7 @@ export function AddMeadowEventModal({ visible, onClose, onSaved }: Props) {
       console.error("[AddMeadowEventModal] Unexpected error saving meadow event", err);
       setSaving(false);
     }
-  }, [selectedType, title, description, howMamaFelt, onSaved, resetForm]);
+  }, [selectedType, title, description, howMamaFelt, onSaved, resetForm, babies]);
 
   return (
     <Modal

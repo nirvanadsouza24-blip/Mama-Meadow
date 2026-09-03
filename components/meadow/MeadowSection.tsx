@@ -7,7 +7,6 @@ import {
   Animated,
   Dimensions,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { supabase } from "@/app/integrations/supabase/client";
 import { useSubscription } from "@/contexts/SubscriptionContext";
@@ -213,21 +212,22 @@ export function MeadowSection() {
   const [selectedEvent, setSelectedEvent] = useState<MeadowEvent | null>(null);
 
   const loadEvents = useCallback(async () => {
-    console.log("[MeadowSection] Loading meadow events from Supabase");
+    const babyId = babies[0]?.id ?? null;
+    console.log("[MeadowSection] Loading meadow events from Supabase", { babyId });
     try {
-      const deviceId = await AsyncStorage.getItem("mama_meadow_device_id");
-      if (!deviceId) {
-        console.log("[MeadowSection] No device_id found, skipping load");
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await (supabase as any)
+      let query = (supabase as any)
         .from("meadow_events")
         .select("*")
-        .eq("device_id", deviceId)
         .order("event_date", { ascending: false })
         .limit(50);
+
+      if (babyId) {
+        query = query.eq("baby_id", babyId);
+      } else {
+        console.log("[MeadowSection] No baby_id available, loading all events");
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("[MeadowSection] Error loading meadow events", error);
@@ -240,7 +240,7 @@ export function MeadowSection() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [babies]);
 
   useEffect(() => {
     loadEvents();
