@@ -316,7 +316,11 @@ export default function MamaChatScreen() {
       try {
         const response = await fetch(EDGE_FUNCTION_URL, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoZXdrbHpldmFwaXBqbnlnb21xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNzQ0MzYsImV4cCI6MjEwMzk1MDQzNn0.zil-57qUyTF-6px45i-xALfKSnUQelaM_tXrj8R23Bw",
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoZXdrbHpldmFwaXBqbnlnb21xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNzQ0MzYsImV4cCI6MjEwMzk1MDQzNn0.zil-57qUyTF-6px45i-xALfKSnUQelaM_tXrj8R23Bw",
+          },
           body: JSON.stringify({ device_id: deviceId, message: trimmed }),
         });
 
