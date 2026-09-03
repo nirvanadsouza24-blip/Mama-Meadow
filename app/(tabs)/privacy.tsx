@@ -188,7 +188,7 @@ export default function PrivacyScreen() {
                     Stored locally on your device
                   </Text>
                   <Text style={{ fontSize: 14, fontFamily: "Karla_400Regular", color: COLORS.textSecondary, lineHeight: 20 }}>
-                    All your data — baby details, appointments, and preferences — is stored only on this device. It is never uploaded to any server or shared with third parties.
+                    Your baby details, appointments, and preferences are stored on this device. Meadow memories and events are securely stored in the cloud to keep them safe.
                   </Text>
                 </View>
               </View>

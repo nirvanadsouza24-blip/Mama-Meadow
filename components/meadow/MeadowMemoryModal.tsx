@@ -129,6 +129,7 @@ export function MeadowMemoryModal({ visible, event, onClose }: Props) {
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
+            style={styles.scrollView}
           >
             {/* Header */}
             <View style={styles.headerRow}>
@@ -202,6 +203,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textSecondary,
     fontFamily: "Karla_700Bold",
+  },
+  scrollView: {
+    flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 24,

@@ -156,7 +156,6 @@ export default function RootLayout() {
                 <Stack.Screen name="paywall" options={{ headerShown: false, presentation: "modal" }} />
                 <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="five-minute-meadow" options={{ headerShown: false, presentation: "fullScreenModal" }} />
               </Stack>
               <SystemBars style={"auto"} />
               </GestureHandlerRootView>

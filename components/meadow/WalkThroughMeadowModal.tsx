@@ -248,6 +248,7 @@ export function WalkThroughMeadowModal({ visible, events, onClose }: Props) {
             <ScrollView
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.timelineContainer}
+              style={styles.timelineScroll}
             >
               {sortedEvents.map((event, index) => (
                 <TimelineItem
@@ -319,6 +320,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textSecondary,
     fontFamily: "Karla_700Bold",
+  },
+  timelineScroll: {
+    flex: 1,
   },
   timelineContainer: {
     paddingHorizontal: 20,

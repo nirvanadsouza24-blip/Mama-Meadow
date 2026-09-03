@@ -199,6 +199,8 @@ export function AddMeadowEventModal({ visible, onClose, onSaved }: Props) {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
               keyboardShouldPersistTaps="handled"
+              style={styles.scrollView}
+              bounces={false}
             >
               {/* Event type picker */}
               <Text style={styles.fieldLabel}>What kind of moment?</Text>
@@ -314,6 +316,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   kav: {
+    flex: 1,
     justifyContent: "flex-end",
   },
   sheet: {
@@ -322,8 +325,12 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     maxHeight: "90%",
     paddingTop: 12,
+    paddingBottom: 0,
     borderWidth: 1,
     borderColor: COLORS.accentBorder,
+  },
+  scrollView: {
+    flex: 1,
   },
   handle: {
     width: 40,
@@ -344,7 +351,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingBottom: 48,
+    paddingBottom: 60,
   },
   fieldLabel: {
     fontSize: 13,
