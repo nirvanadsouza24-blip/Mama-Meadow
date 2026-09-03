@@ -8,16 +8,11 @@ import {
   Dimensions,
   StatusBar,
   ScrollView,
-  ActivityIndicator,
-  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
-import type { AudioPlayer } from "expo-audio";
-import * as FileSystem from "expo-file-system/legacy";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useBabies } from "@/contexts/BabiesContext";
 import { supabase } from "@/app/integrations/supabase/client";
@@ -25,18 +20,6 @@ import { supabase } from "@/app/integrations/supabase/client";
 const { width: SW, height: SH } = Dimensions.get("window");
 
 const SOUND_KEY = "meadow_last_sound";
-
-const AMBIENT_SOUND_URLS: Record<string, string | null> = {
-  "Gentle Rain":       "https://cdn.freesound.org/previews/346/346170_5121236-lq.mp3",
-  "Ocean Waves":       "https://cdn.freesound.org/previews/371/371277_6890003-lq.mp3",
-  "Forest & Birds":    "https://cdn.freesound.org/previews/416/416529_5121236-lq.mp3",
-  "Morning Birds":     "https://cdn.freesound.org/previews/514/514853_5121236-lq.mp3",
-  "Gentle Stream":     "https://cdn.freesound.org/previews/459/459977_9497060-lq.mp3",
-  "Soft Fireplace":    "https://cdn.freesound.org/previews/151/151022_1838058-lq.mp3",
-  "Night Meadow":      "https://cdn.freesound.org/previews/269/269171_4921277-lq.mp3",
-  "Soft Instrumental": "https://cdn.freesound.org/previews/612/612095_5121236-lq.mp3",
-  "Silence": null,
-};
 
 const MOODS = [
   { label: "I'm overwhelmed", emoji: "🌧️" },
@@ -102,79 +85,6 @@ const PHASE_MESSAGES: Record<number, string[]> = {
     "🌸",
   ],
 };
-
-// ─── Web audio fallback ───────────────────────────────────────────────────────
-
-class WebAudioPlayer {
-  private audio: HTMLAudioElement | null = null;
-  loop: boolean = false;
-  private _volume: number = 1.0;
-
-  get volume(): number {
-    return this._volume;
-  }
-  set volume(v: number) {
-    this._volume = v;
-    if (this.audio) this.audio.volume = v;
-  }
-
-  constructor(uri: string) {
-    if (typeof Audio !== "undefined") {
-      this.audio = new (window as any).Audio(uri);
-    }
-  }
-
-  play() {
-    if (this.audio) {
-      this.audio.loop = this.loop;
-      this.audio.volume = this._volume;
-      this.audio.play().catch((e: any) =>
-        console.warn("[WebAudio] play failed", e)
-      );
-    }
-  }
-
-  pause() {
-    this.audio?.pause();
-  }
-
-  remove() {
-    if (this.audio) {
-      this.audio.pause();
-      this.audio.src = "";
-      this.audio = null;
-    }
-  }
-
-  // Stub so native-only listener calls don't crash on web
-  addListener(_event: string, _cb: any) {
-    return { remove: () => {} };
-  }
-}
-
-/** Unified audio player factory — returns WebAudioPlayer on web, native AudioPlayer otherwise */
-function createPlayer(uri: string): any {
-  if (Platform.OS === "web") {
-    console.log("[FiveMinuteMeadow] createPlayer (web)", { uri });
-    return new WebAudioPlayer(uri);
-  }
-  console.log("[FiveMinuteMeadow] createPlayer (native)", { uri });
-  return createAudioPlayer({ uri });
-}
-
-/** Sets audio mode on native only — no-op on web */
-async function setupAudioMode(background: boolean = true) {
-  if (Platform.OS === "web") return;
-  try {
-    await setAudioModeAsync({
-      allowsRecording: false,
-      playsInSilentMode: true,
-      shouldPlayInBackground: background,
-    });
-  } catch (e) {
-    console.warn("[FiveMinuteMeadow] setAudioModeAsync failed", e);
-  }
-}
 
 function getTimeOfDayGradient(): readonly [string, string, string, string] {
   const hour = new Date().getHours();
@@ -396,10 +306,9 @@ function MeadowBackground({
 }
 
 // ─── Guided text overlay ──────────────────────────────────────────────────────
-function GuidedTextOverlay({ text, isLoadingAudio }: { text: string; isLoadingAudio: boolean }) {
+function GuidedTextOverlay({ text }: { text: string }) {
   const opacity = useRef(new Animated.Value(0)).current;
   const prevText = useRef(text);
-  const pulseAnim = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
     if (text !== prevText.current) {
@@ -413,25 +322,9 @@ function GuidedTextOverlay({ text, isLoadingAudio }: { text: string; isLoadingAu
     }
   }, [text]);
 
-  useEffect(() => {
-    if (!isLoadingAudio) {
-      pulseAnim.setValue(0.4);
-      return;
-    }
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 0.4, duration: 700, useNativeDriver: true }),
-      ])
-    ).start();
-  }, [isLoadingAudio]);
-
   return (
     <Animated.View style={[styles.guidedTextContainer, { opacity }]}>
       <Text style={styles.guidedText}>{text}</Text>
-      {isLoadingAudio && (
-        <Animated.View style={[styles.audioLoadingDot, { opacity: pulseAnim }]} />
-      )}
     </Animated.View>
   );
 }
@@ -444,7 +337,6 @@ function MoodSelector({
   onSelectSound,
   onBegin,
   insets,
-  preloadProgress,
 }: {
   selectedMood: string;
   selectedSound: string;
@@ -452,19 +344,7 @@ function MoodSelector({
   onSelectSound: (s: string) => void;
   onBegin: () => void;
   insets: { top: number; bottom: number };
-  preloadProgress: number;
 }) {
-  const isSitWithMe = selectedMood === "SIT WITH ME";
-  const isReady = preloadProgress === 4 || isSitWithMe || !selectedMood;
-  const isPreparing = selectedMood && !isSitWithMe && preloadProgress < 4;
-
-  let beginLabel = "Begin 🌿";
-  if (isPreparing && preloadProgress === 0) {
-    beginLabel = "Preparing your meadow...";
-  } else if (isPreparing && preloadProgress > 0) {
-    beginLabel = `Preparing... (${preloadProgress}/4)`;
-  }
-
   return (
     <ScrollView
       style={styles.moodScrollView}
@@ -521,33 +401,23 @@ function MoodSelector({
           })}
         </View>
 
+        <Text style={styles.audioComingSoon}>🎵 Audio coming soon</Text>
+
         <Pressable
           style={[
             styles.beginButton,
             !selectedMood && styles.beginButtonDisabled,
-            isPreparing && { opacity: 0.8 },
           ]}
           onPress={() => {
             if (!selectedMood) return;
             console.log("[FiveMinuteMeadow] Begin button pressed", {
               mood: selectedMood,
               sound: selectedSound,
-              preloadProgress,
-              isReady,
             });
             onBegin();
           }}
         >
-          <View style={styles.beginButtonInner}>
-            {isPreparing && (
-              <ActivityIndicator
-                size="small"
-                color="rgba(255,255,255,0.9)"
-                style={styles.beginSpinner}
-              />
-            )}
-            <Text style={styles.beginButtonText}>{beginLabel}</Text>
-          </View>
+          <Text style={styles.beginButtonText}>Begin 🌿</Text>
         </Pressable>
       </View>
     </ScrollView>
@@ -558,22 +428,16 @@ function MoodSelector({
 function MeadowControls({
   isPaused,
   onPause,
-  onToggleSound,
   onExit,
   progress,
   soundLabel,
-  isSoundMuted,
-  isLoadingAudio,
   insets,
 }: {
   isPaused: boolean;
   onPause: () => void;
-  onToggleSound: () => void;
   onExit: () => void;
   progress: Animated.Value;
   soundLabel: string;
-  isSoundMuted: boolean;
-  isLoadingAudio: boolean;
   insets: { bottom: number };
 }) {
   const progressWidth = progress.interpolate({
@@ -581,8 +445,6 @@ function MeadowControls({
     outputRange: [0, SW - 40],
     extrapolate: "clamp",
   });
-
-  const muteIcon = isSoundMuted ? "🔇" : "🔊";
 
   return (
     <View style={[styles.controlsContainer, { paddingBottom: insets.bottom + 16 }]}>
@@ -603,16 +465,6 @@ function MeadowControls({
           }}
         >
           <Text style={styles.controlBtnText}>{isPaused ? "▶" : "⏸"}</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.controlBtn}
-          onPress={() => {
-            console.log("[FiveMinuteMeadow] Sound toggle button pressed", { isSoundMuted });
-            onToggleSound();
-          }}
-        >
-          <Text style={styles.controlBtnText}>{muteIcon}</Text>
         </Pressable>
 
         <Pressable
@@ -732,22 +584,7 @@ export default function FiveMinuteMeadow() {
   const [showButterfly, setShowButterfly] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [soundVisible, setSoundVisible] = useState(true);
-
-  // Audio state
-  const ambientSoundRef = useRef<any>(null);
-  const guidancePlayerRef = useRef<any>(null);
-  /** @deprecated use guidancePlayerRef */
-  const guidanceAudioRef = guidancePlayerRef;
-  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
-  const [audioError, setAudioError] = useState(false);
-  const [isSoundMuted, setIsSoundMuted] = useState(false);
-  const previewTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Preload state
-  const preloadedAudioRef = useRef<Record<number, string | null>>({ 1: null, 2: null, 3: null, 4: null });
-  const [preloadProgress, setPreloadProgress] = useState(0);
-  const isPreloadingRef = useRef(false);
+  const [soundVisible] = useState(true);
 
   const gradient = getTimeOfDayGradient();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -771,214 +608,6 @@ export default function FiveMinuteMeadow() {
       router.replace("/paywall");
     }
   }, [isSubscribed, subLoading]);
-
-  // Cleanup audio on unmount
-  useEffect(() => {
-    return () => {
-      cleanupAudio();
-      if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
-    };
-  }, []);
-
-  // ─── Audio helpers ──────────────────────────────────────────────────────────
-
-  const cleanupAudio = () => {
-    try {
-      ambientSoundRef.current?.remove();
-      ambientSoundRef.current = null;
-    } catch (e) {
-      // silent
-    }
-    try {
-      guidanceAudioRef.current?.remove();
-      guidanceAudioRef.current = null;
-    } catch (e) {
-      // silent
-    }
-  };
-
-  const loadGuidanceForPhase = useCallback(async (phaseNum: number, mood: string) => {
-    if (mood === "SIT WITH ME") return;
-
-    const cachedPath = preloadedAudioRef.current[phaseNum];
-    if (!cachedPath) {
-      // Not preloaded yet — text-only fallback for this phase
-      console.log("[FiveMinuteMeadow] Phase audio not ready, text-only for phase", phaseNum);
-      return;
-    }
-
-    try {
-      // Remove previous guidance player
-      try {
-        guidancePlayerRef.current?.remove();
-        guidancePlayerRef.current = null;
-      } catch (e) {
-        // silent
-      }
-
-      const player = createPlayer(cachedPath);
-      player.volume = isSoundMuted ? 0 : 0.9;
-      player.play();
-      guidancePlayerRef.current = player;
-      console.log("[FiveMinuteMeadow] Playing preloaded guidance for phase", phaseNum);
-    } catch (e) {
-      console.warn("[FiveMinuteMeadow] Failed to play preloaded guidance", e);
-    }
-  }, [isSoundMuted]);
-
-  const preloadAllPhases = useCallback(async (mood: string) => {
-    if (mood === "SIT WITH ME") return;
-    if (isPreloadingRef.current) return;
-    isPreloadingRef.current = true;
-    preloadedAudioRef.current = { 1: null, 2: null, 3: null, 4: null };
-    setPreloadProgress(0);
-    console.log("[FiveMinuteMeadow] Starting background preload for all phases", { mood });
-
-    for (const phaseNum of [1, 2, 3, 4]) {
-      try {
-        const phaseMessages = PHASE_MESSAGES[phaseNum];
-        if (!phaseMessages) continue;
-        const phaseText = phaseMessages.join(" ");
-
-        console.log("[FiveMinuteMeadow] Preloading phase audio", { phase: phaseNum, mood });
-
-        const invokePromise = (supabase as any).functions.invoke("generate-meditation-audio", {
-          body: { mood, phase: phaseNum, phaseText },
-        });
-
-        const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
-          Promise.race([
-            promise,
-            new Promise<T>((_, reject) =>
-              setTimeout(() => reject(new Error("timeout")), ms)
-            ),
-          ]);
-
-        const { data, error } = await withTimeout(invokePromise, 20000);
-
-        if (!error && data?.audioBase64) {
-          let audioUri: string;
-
-          if (Platform.OS === "web") {
-            // Web: create a blob URL from base64
-            console.log("[FiveMinuteMeadow] Creating blob URL for phase", phaseNum);
-            const binary = atob(data.audioBase64);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) {
-              bytes[i] = binary.charCodeAt(i);
-            }
-            const blob = new Blob([bytes], { type: "audio/mp3" });
-            audioUri = URL.createObjectURL(blob);
-          } else {
-            // Native: write to temp file
-            const tempPath = `${FileSystem.cacheDirectory}guidance_phase_${phaseNum}_${Date.now()}.mp3`;
-            await FileSystem.writeAsStringAsync(tempPath, data.audioBase64, {
-              encoding: FileSystem.EncodingType.Base64,
-            });
-            audioUri = tempPath;
-          }
-
-          preloadedAudioRef.current[phaseNum] = audioUri;
-          console.log("[FiveMinuteMeadow] Phase preloaded successfully", { phase: phaseNum, audioUri });
-        } else {
-          console.warn("[FiveMinuteMeadow] Preload failed for phase", phaseNum, { error });
-        }
-      } catch (e) {
-        console.warn("[FiveMinuteMeadow] Preload error for phase", phaseNum, e);
-        // Silent fail — text-only fallback for this phase
-      }
-      setPreloadProgress((p) => p + 1);
-    }
-
-    isPreloadingRef.current = false;
-    console.log("[FiveMinuteMeadow] Background preload complete", { mood });
-  }, []);
-
-  const startAudio = useCallback(async (mood: string, sound: string) => {
-    console.log("[FiveMinuteMeadow] Starting audio", { mood, sound, platform: Platform.OS });
-    await setupAudioMode(true);
-
-    // Load ambient sound (looping)
-    const ambientUrl = AMBIENT_SOUND_URLS[sound];
-    if (ambientUrl) {
-      try {
-        console.log("[FiveMinuteMeadow] Loading ambient sound", { sound, url: ambientUrl });
-        const player = createPlayer(ambientUrl);
-        player.loop = true;
-        player.volume = 0.4;
-        player.play();
-        if (typeof player.addListener === "function") {
-          player.addListener("playbackStatusUpdate", (status: any) => {
-            if (status.error) {
-              console.warn("[FiveMinuteMeadow] Ambient playback error:", status.error);
-            }
-          });
-        }
-        ambientSoundRef.current = player;
-        console.log("[FiveMinuteMeadow] Ambient sound playing");
-      } catch (e) {
-        console.warn("[FiveMinuteMeadow] Ambient sound failed to load (silent fail)", e);
-      }
-    }
-
-    // Load first guidance audio
-    await loadGuidanceForPhase(1, mood);
-  }, [loadGuidanceForPhase]);
-
-  const previewSound = useCallback(async (soundName: string) => {
-    console.log("[FiveMinuteMeadow] Previewing sound", { soundName });
-
-    // Clear any pending auto-stop
-    if (previewTimeoutRef.current) {
-      clearTimeout(previewTimeoutRef.current);
-      previewTimeoutRef.current = null;
-    }
-
-    // Stop any existing preview
-    try {
-      ambientSoundRef.current?.remove();
-      ambientSoundRef.current = null;
-    } catch (e) {
-      // silent
-    }
-
-    const url = AMBIENT_SOUND_URLS[soundName];
-    if (!url) return;
-
-    try {
-      await setupAudioMode(false);
-      const player = createPlayer(url);
-      player.volume = 0.5;
-      player.play();
-      ambientSoundRef.current = player;
-      console.log("[FiveMinuteMeadow] Sound preview started", { soundName });
-
-      // Auto-stop after 3 seconds
-      previewTimeoutRef.current = setTimeout(() => {
-        try {
-          ambientSoundRef.current?.remove();
-          ambientSoundRef.current = null;
-          console.log("[FiveMinuteMeadow] Sound preview auto-stopped", { soundName });
-        } catch (e) {
-          // silent
-        }
-      }, 3000);
-    } catch (e) {
-      console.warn("[FiveMinuteMeadow] Sound preview failed (silent fail)", e);
-    }
-  }, []);
-
-  const toggleMute = useCallback(() => {
-    const newMuted = !isSoundMuted;
-    console.log("[FiveMinuteMeadow] Toggle mute", { newMuted });
-    setIsSoundMuted(newMuted);
-    if (ambientSoundRef.current) {
-      ambientSoundRef.current.volume = newMuted ? 0 : 0.4;
-    }
-    if (guidanceAudioRef.current) {
-      guidanceAudioRef.current.volume = newMuted ? 0 : 0.9;
-    }
-  }, [isSoundMuted]);
 
   // Timer
   useEffect(() => {
@@ -1012,17 +641,14 @@ export default function FiveMinuteMeadow() {
       setPhase(2);
       setTextIndex(0);
       console.log("[FiveMinuteMeadow] Phase transition: BREATHE");
-      loadGuidanceForPhase(2, selectedMood);
     } else if (elapsedSeconds >= 150 && elapsedSeconds < 240 && phase !== 3) {
       setPhase(3);
       setTextIndex(0);
       console.log("[FiveMinuteMeadow] Phase transition: RELEASE");
-      loadGuidanceForPhase(3, selectedMood);
     } else if (elapsedSeconds >= 240 && elapsedSeconds < 300 && phase !== 4) {
       setPhase(4);
       setTextIndex(0);
       console.log("[FiveMinuteMeadow] Phase transition: RETURN");
-      loadGuidanceForPhase(4, selectedMood);
     }
 
     // Butterfly at 4:00
@@ -1067,54 +693,32 @@ export default function FiveMinuteMeadow() {
     };
   }, [phase]);
 
-  // Trigger preload when mood is selected
   const handleSelectMood = useCallback((mood: string) => {
     setSelectedMood(mood);
-    if (mood && mood !== "SIT WITH ME") {
-      console.log("[FiveMinuteMeadow] Mood selected — triggering preload", { mood });
-      preloadAllPhases(mood);
-    }
-  }, [preloadAllPhases]);
+  }, []);
 
   const handleBegin = useCallback(() => {
-    // Stop any sound preview before starting
-    if (previewTimeoutRef.current) {
-      clearTimeout(previewTimeoutRef.current);
-      previewTimeoutRef.current = null;
-    }
     AsyncStorage.setItem(SOUND_KEY, selectedSound).catch(() => {});
     setElapsedSeconds(0);
     setPhase(1);
     setTextIndex(0);
     setShowButterfly(false);
-    setAudioError(false);
-    setIsSoundMuted(false);
     cloudOverlay.setValue(0.3);
     goldenOverlay.setValue(0);
     progressAnim.setValue(0);
     console.log("[FiveMinuteMeadow] Meditation started", { mood: selectedMood, sound: selectedSound });
-    startAudio(selectedMood, selectedSound);
-  }, [selectedMood, selectedSound, startAudio]);
+  }, [selectedMood, selectedSound]);
 
   const handlePauseResume = useCallback(() => {
     const newPaused = !isPaused;
     console.log("[FiveMinuteMeadow] Pause/resume toggled", { newPaused });
     setIsPaused(newPaused);
-    if (newPaused) {
-      ambientSoundRef.current?.pause();
-      guidanceAudioRef.current?.pause();
-    } else {
-      ambientSoundRef.current?.play();
-      guidanceAudioRef.current?.play();
-    }
   }, [isPaused]);
 
   const handleExit = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (textIntervalRef.current) clearInterval(textIntervalRef.current);
-    if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
     console.log("[FiveMinuteMeadow] Exiting meditation early", { elapsedSeconds });
-    cleanupAudio();
     router.back();
   }, [elapsedSeconds]);
 
@@ -1148,14 +752,14 @@ export default function FiveMinuteMeadow() {
   }, [babies, selectedMood, selectedFeeling]);
 
   const handleReturn = useCallback(() => {
-    cleanupAudio();
     router.back();
   }, []);
 
   const handleSelectSound = useCallback((soundName: string) => {
+    console.log("[FiveMinuteMeadow] Sound preference saved", { soundName });
     setSelectedSound(soundName);
-    previewSound(soundName);
-  }, [previewSound]);
+    AsyncStorage.setItem(SOUND_KEY, soundName).catch(() => {});
+  }, []);
 
   const isSitWithMe = selectedMood === "SIT WITH ME";
   const currentMessages = PHASE_MESSAGES[phase as 1 | 2 | 3 | 4] ?? [];
@@ -1185,7 +789,6 @@ export default function FiveMinuteMeadow() {
           onSelectSound={handleSelectSound}
           onBegin={handleBegin}
           insets={insets}
-          preloadProgress={preloadProgress}
         />
       )}
 
@@ -1193,29 +796,15 @@ export default function FiveMinuteMeadow() {
       {phase >= 1 && phase <= 4 && (
         <>
           {!isSitWithMe && (
-            <GuidedTextOverlay
-              text={currentText}
-              isLoadingAudio={isLoadingAudio}
-            />
-          )}
-
-          {audioError && (
-            <View style={styles.audioErrorBanner}>
-              <Text style={styles.audioErrorText}>
-                Voice guidance unavailable — text mode active
-              </Text>
-            </View>
+            <GuidedTextOverlay text={currentText} />
           )}
 
           <MeadowControls
             isPaused={isPaused}
             onPause={handlePauseResume}
-            onToggleSound={toggleMute}
             onExit={handleExit}
             progress={progressAnim}
             soundLabel={soundLabelDisplay}
-            isSoundMuted={isSoundMuted}
-            isLoadingAudio={isLoadingAudio}
             insets={insets}
           />
         </>
@@ -1288,29 +877,6 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0,0,0,0.3)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 8,
-  },
-  audioLoadingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "rgba(255,255,255,0.8)",
-    marginTop: 12,
-  },
-
-  // Audio error banner
-  audioErrorBanner: {
-    position: "absolute",
-    bottom: 120,
-    left: 20,
-    right: 20,
-    alignItems: "center",
-  },
-  audioErrorText: {
-    fontSize: 11,
-    fontFamily: "Karla_400Regular",
-    color: "rgba(255,255,255,0.45)",
-    textAlign: "center",
-    letterSpacing: 0.3,
   },
 
   // Controls
@@ -1397,6 +963,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: "center",
   },
+  audioComingSoon: {
+    fontSize: 12,
+    fontFamily: "Karla_400Regular",
+    color: "#4A7C59",
+    opacity: 0.5,
+    textAlign: "center",
+    marginTop: 8,
+    marginBottom: 4,
+  },
   pillRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1451,14 +1026,6 @@ const styles = StyleSheet.create({
     fontFamily: "Karla_700Bold",
     color: "#fff",
     letterSpacing: 0.3,
-  },
-  beginButtonInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  beginSpinner: {
-    marginRight: 4,
   },
 
   // After screen
