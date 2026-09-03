@@ -288,6 +288,412 @@ function MoodCheckin() {
   );
 }
 
+// ─── Exercise Data ────────────────────────────────────────────────────────────
+const EXERCISES = [
+  {
+    id: "breathing",
+    emoji: "🌬️",
+    title: "Deep Belly Breathing",
+    duration: "2 min",
+    category: "Breathwork",
+    color: "#E8F5E9",
+    benefit: "Activates your deep core and calms your nervous system",
+    steps: [
+      "Sit or lie comfortably",
+      "Place one hand on your belly",
+      "Inhale slowly through your nose for 4 counts — feel your belly rise",
+      "Exhale through your mouth for 6 counts — feel your belly fall",
+      "Repeat 8–10 times",
+    ],
+  },
+  {
+    id: "kegels",
+    emoji: "💪",
+    title: "Pelvic Floor Squeeze (Kegels)",
+    duration: "2 min",
+    category: "Pelvic Floor",
+    color: "#FFF3E0",
+    benefit: "Strengthens pelvic floor, reduces leaking, supports recovery",
+    steps: [
+      "Sit or lie comfortably",
+      "Identify your pelvic floor muscles (the ones you'd use to stop urination)",
+      "Squeeze and lift for 5 counts",
+      "Release slowly for 5 counts",
+      "Rest for 5 counts",
+      "Repeat 10 times",
+    ],
+  },
+  {
+    id: "bridges",
+    emoji: "🌉",
+    title: "Glute Bridges",
+    duration: "2 min",
+    category: "Glutes & Core",
+    color: "#F3E5F5",
+    benefit: "Rebuilds glute strength and supports your lower back",
+    steps: [
+      "Lie on your back, knees bent, feet flat on the floor",
+      "Engage your core and squeeze your glutes",
+      "Lift your hips toward the ceiling",
+      "Hold for 2 counts at the top",
+      "Lower slowly back down",
+      "Repeat 12–15 times",
+    ],
+  },
+  {
+    id: "catcow",
+    emoji: "🐱",
+    title: "Cat-Cow Stretch",
+    duration: "1 min",
+    category: "Spine & Flexibility",
+    color: "#E8EAF6",
+    benefit: "Relieves back tension and improves spinal mobility",
+    steps: [
+      "Start on hands and knees (tabletop position)",
+      "Inhale: drop your belly, lift your head and tailbone (Cow)",
+      "Exhale: round your spine toward the ceiling, tuck chin and tailbone (Cat)",
+      "Move slowly and with your breath",
+      "Repeat 8–10 times",
+    ],
+  },
+  {
+    id: "pushups",
+    emoji: "💪",
+    title: "Wall Push-Ups",
+    duration: "1 min",
+    category: "Upper Body",
+    color: "#FFF8E1",
+    benefit: "Rebuilds upper body strength safely without floor pressure",
+    steps: [
+      "Stand facing a wall, arms extended, palms flat on the wall",
+      "Bend your elbows and lean toward the wall",
+      "Push back to start",
+      "Keep your core engaged throughout",
+      "Repeat 10–15 times",
+    ],
+  },
+  {
+    id: "stretch",
+    emoji: "🌿",
+    title: "Standing Side Stretch",
+    duration: "2 min",
+    category: "Flexibility",
+    color: "#E0F2F1",
+    benefit: "Opens the side body and relieves tension from carrying baby",
+    steps: [
+      "Stand tall with feet hip-width apart",
+      "Raise your right arm overhead",
+      "Lean gently to the left, feeling the stretch along your right side",
+      "Hold for 3 breaths",
+      "Return to centre and repeat on the other side",
+      "Do 3 rounds each side",
+    ],
+  },
+];
+
+// ─── Exercise Animations ──────────────────────────────────────────────────────
+function BreathingAnimation() {
+  const scale = useRef(new Animated.Value(1)).current;
+  const labelOpacity = useRef(new Animated.Value(1)).current;
+  const [phase, setPhase] = useState<"Inhale" | "Exhale">("Inhale");
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(scale, { toValue: 1.4, duration: 2000, useNativeDriver: true }),
+          Animated.sequence([
+            Animated.timing(labelOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+            Animated.timing(labelOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+          ]),
+        ]),
+        Animated.parallel([
+          Animated.timing(scale, { toValue: 1.0, duration: 3000, useNativeDriver: true }),
+          Animated.sequence([
+            Animated.timing(labelOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+            Animated.timing(labelOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+          ]),
+        ]),
+      ])
+    );
+    loop.start();
+    let inhale = true;
+    const interval = setInterval(() => {
+      setPhase(inhale ? "Exhale" : "Inhale");
+      inhale = !inhale;
+    }, 2500);
+    return () => {
+      loop.stop();
+      clearInterval(interval);
+    };
+  }, []);
+
+  return (
+    <View style={exerciseStyles.animContainer}>
+      <Animated.View style={[exerciseStyles.breathCircle, { transform: [{ scale }] }]} />
+      <Animated.Text style={[exerciseStyles.animLabel, { opacity: labelOpacity }]}>{phase}</Animated.Text>
+    </View>
+  );
+}
+
+function PelvicFloorAnimation() {
+  const scale = useRef(new Animated.Value(1)).current;
+  const [phase, setPhase] = useState<"Squeeze" | "Release">("Squeeze");
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scale, { toValue: 1.3, duration: 1000, useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 1.0, duration: 1000, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    let squeeze = true;
+    const interval = setInterval(() => {
+      setPhase(squeeze ? "Release" : "Squeeze");
+      squeeze = !squeeze;
+    }, 1000);
+    return () => {
+      loop.stop();
+      clearInterval(interval);
+    };
+  }, []);
+
+  return (
+    <View style={exerciseStyles.animContainer}>
+      <Animated.Text style={[exerciseStyles.animEmoji, { transform: [{ scale }] }]}>🌸</Animated.Text>
+      <Text style={exerciseStyles.animLabel}>{phase}</Text>
+    </View>
+  );
+}
+
+function GluteBridgeAnimation() {
+  const translateY = useRef(new Animated.Value(0)).current;
+  const [phase, setPhase] = useState<"Lift" | "Lower">("Lift");
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(translateY, { toValue: -24, duration: 800, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: 0, duration: 800, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    let lift = true;
+    const interval = setInterval(() => {
+      setPhase(lift ? "Lower" : "Lift");
+      lift = !lift;
+    }, 800);
+    return () => {
+      loop.stop();
+      clearInterval(interval);
+    };
+  }, []);
+
+  return (
+    <View style={exerciseStyles.animContainer}>
+      <Animated.View style={[exerciseStyles.hipRect, { transform: [{ translateY }] }]} />
+      <Text style={exerciseStyles.animLabel}>{phase}</Text>
+    </View>
+  );
+}
+
+function CatCowAnimation() {
+  const cowOpacity = useRef(new Animated.Value(1)).current;
+  const catOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(cowOpacity, { toValue: 0, duration: 1200, useNativeDriver: true }),
+          Animated.timing(catOpacity, { toValue: 1, duration: 1200, useNativeDriver: true }),
+        ]),
+        Animated.parallel([
+          Animated.timing(cowOpacity, { toValue: 1, duration: 1200, useNativeDriver: true }),
+          Animated.timing(catOpacity, { toValue: 0, duration: 1200, useNativeDriver: true }),
+        ]),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  return (
+    <View style={exerciseStyles.animContainer}>
+      <View style={exerciseStyles.catCowWrap}>
+        <Animated.Text style={[exerciseStyles.animEmoji, { opacity: cowOpacity, position: "absolute" }]}>🐄</Animated.Text>
+        <Animated.Text style={[exerciseStyles.animEmoji, { opacity: catOpacity, position: "absolute" }]}>🐱</Animated.Text>
+      </View>
+      <Text style={exerciseStyles.animLabel}>Breathe with movement</Text>
+    </View>
+  );
+}
+
+function WallPushUpAnimation() {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const [phase, setPhase] = useState<"Push" | "Return">("Push");
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(translateX, { toValue: -30, duration: 700, useNativeDriver: true }),
+        Animated.timing(translateX, { toValue: 0, duration: 700, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    let push = true;
+    const interval = setInterval(() => {
+      setPhase(push ? "Return" : "Push");
+      push = !push;
+    }, 700);
+    return () => {
+      loop.stop();
+      clearInterval(interval);
+    };
+  }, []);
+
+  return (
+    <View style={exerciseStyles.animContainer}>
+      <View style={exerciseStyles.wallRow}>
+        <Animated.View style={[exerciseStyles.bodyCircle, { transform: [{ translateX }] }]} />
+        <View style={exerciseStyles.wallLine} />
+      </View>
+      <Text style={exerciseStyles.animLabel}>{phase}</Text>
+    </View>
+  );
+}
+
+function SideStretchAnimation() {
+  const rotate = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(rotate, { toValue: -8, duration: 1000, useNativeDriver: true }),
+        Animated.timing(rotate, { toValue: 8, duration: 2000, useNativeDriver: true }),
+        Animated.timing(rotate, { toValue: 0, duration: 1000, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  const rotateInterp = rotate.interpolate({ inputRange: [-8, 8], outputRange: ["-8deg", "8deg"] });
+
+  return (
+    <View style={exerciseStyles.animContainer}>
+      <Animated.Text style={[exerciseStyles.animEmoji, { transform: [{ rotate: rotateInterp }] }]}>🧍‍♀️</Animated.Text>
+      <Text style={exerciseStyles.animLabel}>Stretch each side</Text>
+    </View>
+  );
+}
+
+const EXERCISE_ANIMATIONS: Record<string, React.FC> = {
+  breathing: BreathingAnimation,
+  kegels: PelvicFloorAnimation,
+  bridges: GluteBridgeAnimation,
+  catcow: CatCowAnimation,
+  pushups: WallPushUpAnimation,
+  stretch: SideStretchAnimation,
+};
+
+// ─── Exercise Card ────────────────────────────────────────────────────────────
+function ExerciseCard({ exercise }: { exercise: typeof EXERCISES[0] }) {
+  const [expanded, setExpanded] = useState(false);
+  const maxHeight = useRef(new Animated.Value(0)).current;
+  const chevronRotate = useRef(new Animated.Value(0)).current;
+
+  const handleToggle = () => {
+    const toExpanded = !expanded;
+    console.log(`[ExercisesModal] Exercise card toggled: ${exercise.title} → ${toExpanded ? "expanded" : "collapsed"}`);
+    setExpanded(toExpanded);
+    Animated.parallel([
+      Animated.timing(maxHeight, { toValue: toExpanded ? 420 : 0, duration: 280, useNativeDriver: false }),
+      Animated.timing(chevronRotate, { toValue: toExpanded ? 1 : 0, duration: 280, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const chevronInterp = chevronRotate.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "90deg"] });
+  const AnimComp = EXERCISE_ANIMATIONS[exercise.id];
+
+  return (
+    <View style={[exerciseStyles.exCard, { backgroundColor: exercise.color }]}>
+      <Pressable onPress={handleToggle} style={exerciseStyles.exCardHeader}>
+        <View style={exerciseStyles.exEmojiWrap}>
+          <Text style={exerciseStyles.exEmoji}>{exercise.emoji}</Text>
+        </View>
+        <View style={exerciseStyles.exTitleWrap}>
+          <Text style={exerciseStyles.exTitle}>{exercise.title}</Text>
+          <View style={exerciseStyles.exMeta}>
+            <View style={exerciseStyles.exDurationBadge}>
+              <Text style={exerciseStyles.exDurationText}>{exercise.duration}</Text>
+            </View>
+            <Text style={exerciseStyles.exCategory}>{exercise.category}</Text>
+          </View>
+        </View>
+        <Animated.Text style={[exerciseStyles.exChevron, { transform: [{ rotate: chevronInterp }] }]}>›</Animated.Text>
+      </Pressable>
+
+      <Animated.View style={{ maxHeight, overflow: "hidden" }}>
+        <View style={exerciseStyles.exExpandedContent}>
+          {/* Animation */}
+          <View style={exerciseStyles.exAnimWrap}>
+            {AnimComp && <AnimComp />}
+          </View>
+          {/* Benefit */}
+          <Text style={exerciseStyles.exBenefit}>✨ {exercise.benefit}</Text>
+          {/* Steps */}
+          {exercise.steps.map((step, i) => {
+            const stepNum = i + 1;
+            return (
+              <View key={stepNum} style={exerciseStyles.exStep}>
+                <View style={exerciseStyles.exStepNum}>
+                  <Text style={exerciseStyles.exStepNumText}>{stepNum}</Text>
+                </View>
+                <Text style={exerciseStyles.exStepText}>{step}</Text>
+              </View>
+            );
+          })}
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
+
+// ─── Exercises Modal ──────────────────────────────────────────────────────────
+function ExercisesModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <SafeAreaView style={styles.modalSafeArea} edges={["top", "bottom"]}>
+        {/* Header */}
+        <View style={exerciseStyles.modalHeader}>
+          <View style={styles.modalHeaderInner}>
+            <Text style={exerciseStyles.modalHeaderTitle}>10-Minute Mama Workout 🧘‍♀️</Text>
+          </View>
+          <Text style={exerciseStyles.modalHeaderSubtitle}>Gentle · Safe · Postpartum-friendly</Text>
+          <TouchableOpacity style={styles.modalCloseBtn} onPress={onClose} accessibilityLabel="Close modal">
+            <Text style={styles.modalCloseBtnText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.modalScroll} contentContainerStyle={exerciseStyles.modalScrollContent} showsVerticalScrollIndicator={false}>
+          {EXERCISES.map((ex) => (
+            <ExerciseCard key={ex.id} exercise={ex} />
+          ))}
+
+          {/* Footer encouragement */}
+          <View style={exerciseStyles.encouragementBox}>
+            <Text style={exerciseStyles.encouragementText}>You're doing amazing, Mama! 🌸</Text>
+          </View>
+
+          <View style={{ height: 32 }} />
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
 // ─── Hair & Body Modal ────────────────────────────────────────────────────────
 function HairBodyModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   return (
@@ -396,6 +802,7 @@ export default function MotherScreen() {
   const router = useRouter();
   const { isSubscribed } = useSubscription();
   const [hairModalVisible, setHairModalVisible] = useState(false);
+  const [exercisesModalVisible, setExercisesModalVisible] = useState(false);
 
   const handleGoPremium = () => {
     console.log("[MotherScreen] Go Premium button pressed");
@@ -441,6 +848,21 @@ export default function MotherScreen() {
   const handleHairModalClose = () => {
     console.log("[MotherScreen] Hair & Body modal closed");
     setHairModalVisible(false);
+  };
+
+  const handleExercisesCard = () => {
+    console.log("[MotherScreen] 10-Minute Mama Exercises card pressed");
+    if (!isSubscribed) {
+      console.log("[MotherScreen] Exercises blocked for non-subscriber — redirecting to paywall");
+      router.push("/paywall");
+      return;
+    }
+    setExercisesModalVisible(true);
+  };
+
+  const handleExercisesModalClose = () => {
+    console.log("[MotherScreen] Exercises modal closed");
+    setExercisesModalVisible(false);
   };
 
   const handleMamaChat = () => {
@@ -652,6 +1074,29 @@ export default function MotherScreen() {
           </AnimatedPressable>
         </FadeInView>
 
+        {/* 10-Minute Exercises Card */}
+        <FadeInView delay={450}>
+          <AnimatedPressable onPress={handleExercisesCard} scaleValue={0.975}>
+            <View style={styles.exerciseCard}>
+              <View style={styles.exerciseCardInner}>
+                <View style={styles.exerciseIconWrap}>
+                  <Text style={styles.exerciseIcon}>🧘‍♀️</Text>
+                </View>
+                <View style={styles.exerciseTextWrap}>
+                  <Text style={styles.exerciseTitle}>10-Minute Mama Exercises</Text>
+                  <Text style={styles.exerciseSubtitle}>
+                    Gentle postpartum movement · Feel good in your body
+                  </Text>
+                </View>
+                <Text style={styles.exerciseChevron}>›</Text>
+              </View>
+              <Text style={styles.exerciseTagline}>
+                Safe for all stages of postpartum recovery
+              </Text>
+            </View>
+          </AnimatedPressable>
+        </FadeInView>
+
         {/* App version */}
         <FadeInView delay={480}>
           <Text style={styles.versionText}>Mama Meadow · v1.0</Text>
@@ -660,6 +1105,9 @@ export default function MotherScreen() {
 
       {/* Hair & Body Modal */}
       <HairBodyModal visible={hairModalVisible} onClose={handleHairModalClose} />
+
+      {/* Exercises Modal */}
+      <ExercisesModal visible={exercisesModalVisible} onClose={handleExercisesModalClose} />
     </SafeAreaView>
   );
 }
@@ -1262,6 +1710,64 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
+  // ── Exercise Card (entry) ──
+  exerciseCard: {
+    backgroundColor: "#D4F0E0",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 28,
+    shadowColor: "#4A7C59",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "rgba(74, 124, 89, 0.25)",
+  },
+  exerciseCardInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 10,
+  },
+  exerciseIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.55)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  exerciseIcon: {
+    fontSize: 24,
+  },
+  exerciseTextWrap: {
+    flex: 1,
+  },
+  exerciseTitle: {
+    fontSize: 17,
+    fontFamily: "Fraunces_700Bold",
+    color: COLORS.text,
+    letterSpacing: -0.2,
+    marginBottom: 3,
+  },
+  exerciseSubtitle: {
+    fontSize: 12,
+    fontFamily: "Karla_400Regular",
+    color: COLORS.textSecondary,
+  },
+  exerciseChevron: {
+    fontSize: 22,
+    color: COLORS.textSecondary,
+    fontWeight: "300",
+  },
+  exerciseTagline: {
+    fontSize: 13,
+    fontFamily: "Karla_400Regular",
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+  },
+
   // ── Footer ──
   versionText: {
     fontSize: 12,
@@ -1393,5 +1899,229 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     textAlign: "center",
     letterSpacing: -0.1,
+  },
+});
+
+// ─── Exercise-specific Styles ─────────────────────────────────────────────────
+const exerciseStyles = StyleSheet.create({
+  // Modal header
+  modalHeader: {
+    backgroundColor: "#C8E6C9",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
+    position: "relative",
+  },
+  modalHeaderTitle: {
+    fontSize: 20,
+    fontFamily: "Fraunces_700Bold",
+    color: COLORS.text,
+    letterSpacing: -0.3,
+    flex: 1,
+    lineHeight: 26,
+    paddingRight: 44,
+  },
+  modalHeaderSubtitle: {
+    fontSize: 13,
+    fontFamily: "Karla_400Regular",
+    color: COLORS.textSecondary,
+    marginTop: 4,
+  },
+  modalScrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 40,
+  },
+
+  // Exercise card (in modal)
+  exCard: {
+    borderRadius: 16,
+    marginBottom: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(44,26,14,0.06)",
+  },
+  exCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    gap: 12,
+  },
+  exEmojiWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  exEmoji: {
+    fontSize: 22,
+  },
+  exTitleWrap: {
+    flex: 1,
+  },
+  exTitle: {
+    fontSize: 15,
+    fontFamily: "Fraunces_700Bold",
+    color: COLORS.text,
+    letterSpacing: -0.1,
+    marginBottom: 4,
+  },
+  exMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  exDurationBadge: {
+    backgroundColor: "rgba(74,124,89,0.15)",
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  exDurationText: {
+    fontSize: 11,
+    fontFamily: "Karla_700Bold",
+    color: COLORS.primary,
+    letterSpacing: 0.2,
+  },
+  exCategory: {
+    fontSize: 11,
+    fontFamily: "Karla_400Regular",
+    color: COLORS.textTertiary,
+  },
+  exChevron: {
+    fontSize: 22,
+    color: COLORS.textTertiary,
+    fontWeight: "300",
+  },
+
+  // Expanded content
+  exExpandedContent: {
+    paddingHorizontal: 14,
+    paddingBottom: 16,
+  },
+  exAnimWrap: {
+    height: 120,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    marginBottom: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(44,26,14,0.05)",
+  },
+  exBenefit: {
+    fontSize: 13,
+    fontFamily: "Karla_400Regular",
+    fontStyle: "italic",
+    color: COLORS.primary,
+    marginBottom: 12,
+    lineHeight: 18,
+  },
+  exStep: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginBottom: 8,
+  },
+  exStepNum: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: COLORS.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 1,
+    flexShrink: 0,
+  },
+  exStepNumText: {
+    fontSize: 11,
+    fontFamily: "Karla_700Bold",
+    color: "#fff",
+  },
+  exStepText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Karla_400Regular",
+    color: COLORS.text,
+    lineHeight: 19,
+  },
+
+  // Encouragement footer
+  encouragementBox: {
+    backgroundColor: "#E8F5E9",
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 8,
+    borderWidth: 1.5,
+    borderColor: "rgba(74,124,89,0.25)",
+    alignItems: "center",
+  },
+  encouragementText: {
+    fontSize: 17,
+    fontFamily: "Fraunces_700Bold",
+    fontStyle: "italic",
+    color: COLORS.primary,
+    textAlign: "center",
+    letterSpacing: -0.1,
+  },
+
+  // Animation components
+  animContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  animEmoji: {
+    fontSize: 48,
+  },
+  animLabel: {
+    fontSize: 12,
+    fontFamily: "Karla_700Bold",
+    color: COLORS.textSecondary,
+    letterSpacing: 0.3,
+  },
+  breathCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "rgba(74,124,89,0.2)",
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
+  hipRect: {
+    width: 80,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: COLORS.accent,
+  },
+  catCowWrap: {
+    width: 60,
+    height: 60,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  wallRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  bodyCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+  },
+  wallLine: {
+    width: 3,
+    height: 60,
+    backgroundColor: COLORS.textTertiary,
+    borderRadius: 2,
   },
 });
