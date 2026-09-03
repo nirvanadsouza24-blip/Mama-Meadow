@@ -18,6 +18,7 @@ import { Stack, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useBabies, Baby, LogType } from "@/contexts/BabiesContext";
+import { MeadowSection } from "@/components/meadow/MeadowSection";
 
 const { width: SW, height: SH } = Dimensions.get("window");
 
@@ -463,6 +464,11 @@ export default function HomeScreen() {
                 <BabyCard key={baby.id} baby={baby} />
               ))
             )}
+          </FadeInView>
+
+          {/* Your Little Meadow */}
+          <FadeInView delay={200}>
+            <MeadowSection />
           </FadeInView>
 
           {/* You tab shortcut */}
