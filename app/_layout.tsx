@@ -6,7 +6,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { SystemBars } from "react-native-edge-to-edge";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { useColorScheme, Alert } from "react-native";
+import { useColorScheme, Alert, ActivityIndicator, View } from "react-native";
 import { useNetworkState } from "expo-network";
 import {
   DarkTheme,
@@ -83,13 +83,34 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    let cancelled = false;
+    const timeout = setTimeout(() => {
+      if (!cancelled && onboardingComplete === null) {
+        console.warn('[Layout] isOnboardingComplete timed out — defaulting to false');
+        setOnboardingComplete(false);
+      }
+    }, 3000);
+
     isOnboardingComplete()
       .then((complete) => {
-        setOnboardingComplete(complete);
+        if (!cancelled) {
+          clearTimeout(timeout);
+          console.log('[Layout] isOnboardingComplete resolved:', complete);
+          setOnboardingComplete(complete);
+        }
       })
       .catch(() => {
-        setOnboardingComplete(false);
+        if (!cancelled) {
+          clearTimeout(timeout);
+          console.warn('[Layout] isOnboardingComplete failed — defaulting to false');
+          setOnboardingComplete(false);
+        }
       });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
   }, [pathname]);
 
   useEffect(() => {
@@ -110,8 +131,12 @@ export default function RootLayout() {
     }
   }, [networkState.isConnected, networkState.isInternetReachable]);
 
-  if (onboardingComplete === null) {
-    return null;
+  if (onboardingComplete === null || !loaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF8F0' }}>
+        <ActivityIndicator size="large" color="#C8A882" />
+      </View>
+    );
   }
 
   const CustomDefaultTheme: Theme = {
