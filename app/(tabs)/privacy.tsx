@@ -182,7 +182,7 @@ export default function PrivacyScreen() {
 
   const handleTerms = () => {
     console.log("[PrivacyScreen] Terms of Use link pressed");
-    Linking.openURL("https://nirvanadsouza24.github.io/mama-meadow/terms");
+    Linking.openURL("https://nirvanadsouza24-blip.github.io/Mama-Meadow/terms.html");
   };
 
   return (
