@@ -186,8 +186,6 @@ export default function RootLayout() {
                 <Stack.Screen name="paywall" options={{ headerShown: false, presentation: "modal" }} />
                 <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="letters-compose" options={{ headerShown: false }} />
-                <Stack.Screen name="letters-read" options={{ headerShown: false }} />
               </Stack>
               <SystemBars style={"auto"} />
               </GestureHandlerRootView>

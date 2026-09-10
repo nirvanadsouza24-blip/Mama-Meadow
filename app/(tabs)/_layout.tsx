@@ -53,7 +53,6 @@ export default function TabLayout() {
         options={{ headerShown: true, title: 'Wellness Hub', ...HEADER_OPTIONS }}
       />
       <Stack.Screen key="mama-chat" name="mama-chat" options={{ headerShown: false }} />
-      <Stack.Screen key="letters" name="letters" options={{ headerShown: false }} />
     </Stack>
   );
 }
