@@ -66,6 +66,7 @@ export default function PaywallScreen() {
   const {
     packages,
     loading,
+    packagesLoading,
     isSubscribed,
     isWeb,
     purchasePackage,
@@ -267,8 +268,8 @@ export default function PaywallScreen() {
     "rgba(90, 200, 250, 0.25)",  // Blue
   ];
 
-  // Loading state
-  if (loading) {
+  // Loading state — keep spinner until both RC is initialized AND packages are loaded
+  if (loading || packagesLoading) {
     return (
       <View style={styles.container}>
         <LinearGradient
