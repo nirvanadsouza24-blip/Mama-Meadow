@@ -488,6 +488,28 @@ export default function HomeScreen() {
           />
         </FadeInView>
 
+        {/* Letters to My Future Self */}
+        <FadeInView delay={210}>
+          <AnimatedPressable
+            onPress={() => {
+              console.log("[HomeScreen] Letters to My Future Self card pressed — navigating to /(tabs)/letters");
+              router.push("/(tabs)/letters");
+            }}
+            scaleValue={0.975}
+          >
+            <View style={styles.lettersCard}>
+              <Text style={styles.lettersEmoji}>✉️</Text>
+              <View style={styles.lettersCardText}>
+                <Text style={styles.lettersCardTitle}>Letters to My Future Self</Text>
+                <Text style={styles.lettersCardSubtitle}>Write today. Read when the time is right.</Text>
+                <View style={styles.lettersBadge}>
+                  <Text style={styles.lettersBadgeText}>Free to write · Premium to read</Text>
+                </View>
+              </View>
+            </View>
+          </AnimatedPressable>
+        </FadeInView>
+
         {/* You tab shortcut */}
         <FadeInView delay={220}>
           <View style={[styles.sectionLabel, { marginTop: 8 }]}>
@@ -814,6 +836,61 @@ const styles = StyleSheet.create({
     fontFamily: "Karla_400Regular",
     color: COLORS.textSecondary,
     textAlign: "center",
+  },
+
+  // Letters card
+  lettersCard: {
+    backgroundColor: "#FDF3E3",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    borderWidth: 1,
+    borderColor: "rgba(200,149,108,0.25)",
+    shadowColor: "#2C1A0E",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  lettersEmoji: {
+    fontSize: 36,
+  },
+  lettersCardText: {
+    flex: 1,
+  },
+  lettersCardTitle: {
+    fontSize: 16,
+    fontFamily: "Fraunces_700Bold",
+    fontWeight: "700",
+    color: COLORS.text,
+    letterSpacing: -0.2,
+    marginBottom: 3,
+  },
+  lettersCardSubtitle: {
+    fontSize: 13,
+    fontFamily: "Karla_400Regular",
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  lettersBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(200,149,108,0.15)",
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: "rgba(200,149,108,0.30)",
+  },
+  lettersBadgeText: {
+    fontSize: 11,
+    fontFamily: "Karla_700Bold",
+    fontWeight: "700",
+    color: "#A0622A",
+    letterSpacing: 0.1,
   },
 
   // You card
