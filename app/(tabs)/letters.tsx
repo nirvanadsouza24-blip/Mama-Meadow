@@ -479,7 +479,7 @@ export default function LettersScreen() {
 
   const handleWriteLetter = useCallback(() => {
     console.log("[Letters] Write a Letter button pressed — navigating to compose");
-    router.push("/(tabs)/letters-compose");
+    router.push("/letters-compose");
   }, [router]);
 
   const handleLetterPress = useCallback(
@@ -497,7 +497,7 @@ export default function LettersScreen() {
         setGateVisible(true);
         return;
       }
-      router.push({ pathname: "/(tabs)/letters-read", params: { id: letter.id } });
+      router.push({ pathname: "/letters-read", params: { id: letter.id } });
     },
     [isSubscribed, router]
   );
