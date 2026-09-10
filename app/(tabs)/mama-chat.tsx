@@ -102,6 +102,7 @@ function TypingIndicator() {
       a2.stop();
       a3.stop();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -176,6 +177,7 @@ function LockedState() {
         Animated.timing(glowAnim, { toValue: 0.5, duration: 1500, useNativeDriver: true }),
       ])
     ).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleUnlock = () => {

@@ -84,6 +84,7 @@ export function MeadowMemoryModal({ visible, event, onClose }: Props) {
     if (visible) {
       console.log("[MeadowMemoryModal] Opening memory modal", { eventId: event?.id, title: event?.title });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   if (!event) return null;

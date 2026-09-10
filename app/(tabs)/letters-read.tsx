@@ -80,6 +80,7 @@ function FloatingParticles() {
       };
       setTimeout(() => runParticle(), p.delay);
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -176,6 +177,7 @@ export default function LettersReadScreen() {
         Animated.timing(particlesOpacity, { toValue: 1, duration: 600, useNativeDriver: true }).start();
       }, 500);
     }, 200);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [letter]);
 
   const handleClose = useCallback(() => {

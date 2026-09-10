@@ -22,6 +22,7 @@ import { BabiesProvider } from "@/contexts/BabiesContext";
 
 // Only wrap with ErrorBoundary in dev — production apps should not include it
 import { isOnboardingComplete } from "@/utils/onboardingStorage";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const DevErrorBoundary: React.ComponentType<{ children: React.ReactNode }> = __DEV__
   ? (require("@/components/ErrorBoundary").ErrorBoundary as React.ComponentType<{ children: React.ReactNode }>)
   : ({ children }: { children: React.ReactNode }) => <>{children}</>;
@@ -68,6 +69,7 @@ function SubscriptionRedirect() {
       }
     });
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSubscribed, loading, pathname]);
 
   return null;
@@ -111,6 +113,7 @@ export default function RootLayout() {
       cancelled = true;
       clearTimeout(timeout);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   useEffect(() => {

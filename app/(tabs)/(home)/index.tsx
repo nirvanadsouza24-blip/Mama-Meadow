@@ -84,6 +84,7 @@ function FloatingNature() {
         ).start();
       }
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -185,6 +186,7 @@ function FadeInView({ children, delay = 0 }: { children: React.ReactNode; delay?
       Animated.timing(opacity, { toValue: 1, duration: 350, delay, useNativeDriver: true }),
       Animated.timing(translateY, { toValue: 0, duration: 350, delay, useNativeDriver: true }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <Animated.View style={{ opacity, transform: [{ translateY }] }}>

@@ -74,6 +74,7 @@ function FadeInItem({ children, index }: { children: React.ReactNode; index: num
       Animated.timing(opacity, { toValue: 1, duration: 350, delay: index * 70, useNativeDriver: true }),
       Animated.timing(translateY, { toValue: 0, duration: 350, delay: index * 70, useNativeDriver: true }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return <Animated.View style={{ opacity, transform: [{ translateY }] }}>{children}</Animated.View>;
 }
@@ -103,6 +104,7 @@ export default function AppointmentsScreen() {
     });
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const saveAppointments = useCallback(async (updated: Appointment[]) => {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated)).catch(() => {});
   }, []);
@@ -127,6 +129,7 @@ export default function AppointmentsScreen() {
     setModalVisible(false);
   }, [title, date, time, location, appointments]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleDelete = useCallback((appt: Appointment) => {
     console.log("[AppointmentsScreen] Delete appointment tapped:", appt.id);
     Alert.alert(

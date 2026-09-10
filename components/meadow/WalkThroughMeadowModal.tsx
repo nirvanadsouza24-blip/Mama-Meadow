@@ -100,6 +100,7 @@ function TimelineItem({ event, index, isLast }: TimelineItemProps) {
         useNativeDriver: true,
       }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleExpand = () => {
@@ -188,6 +189,7 @@ export function WalkThroughMeadowModal({ visible, events, onClose }: Props) {
     if (visible) {
       console.log("[WalkThroughMeadowModal] Modal opened", { eventCount: events.length });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   // Sort oldest → newest

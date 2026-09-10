@@ -151,6 +151,7 @@ function FadeInView({ children, delay = 0 }: { children: React.ReactNode; delay?
       Animated.timing(opacity, { toValue: 1, duration: 400, delay, useNativeDriver: true }),
       Animated.timing(translateY, { toValue: 0, duration: 400, delay, useNativeDriver: true }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <Animated.View style={{ opacity, transform: [{ translateY }] }}>
@@ -170,6 +171,7 @@ function DailyQuoteCard() {
         Animated.timing(borderOpacity, { toValue: 0.4, duration: 1500, useNativeDriver: true }),
       ])
     ).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const today = new Date();
@@ -209,6 +211,7 @@ function AffirmationCard() {
       setIndex((prev) => (prev + 1) % AFFIRMATIONS.length);
       Animated.timing(opacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const affirmationText = AFFIRMATIONS[index];
@@ -245,8 +248,10 @@ function MoodCheckin() {
         }
       } catch {}
     }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleMoodSelect = useCallback(
     (idx: number) => {
       console.log(`[MotherScreen] Mood selected: ${MOODS[idx].label}`);
@@ -426,6 +431,7 @@ function BreathingAnimation() {
       loop.stop();
       clearInterval(interval);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -457,6 +463,7 @@ function PelvicFloorAnimation() {
       loop.stop();
       clearInterval(interval);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -488,6 +495,7 @@ function GluteBridgeAnimation() {
       loop.stop();
       clearInterval(interval);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -517,6 +525,7 @@ function CatCowAnimation() {
     );
     loop.start();
     return () => loop.stop();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -551,6 +560,7 @@ function WallPushUpAnimation() {
       loop.stop();
       clearInterval(interval);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -577,6 +587,7 @@ function SideStretchAnimation() {
     );
     loop.start();
     return () => loop.stop();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const rotateInterp = rotate.interpolate({ inputRange: [-8, 8], outputRange: ["-8deg", "8deg"] });

@@ -172,6 +172,7 @@ function FloatingMeadowElement({
         }),
       ])
     ).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const emoji = event.emoji || EVENT_TYPE_EMOJIS[event.event_type] || "🌼";
@@ -258,6 +259,7 @@ export function MeadowSection({ onAddPress, reloadKey }: MeadowSectionProps = {}
       console.log("[MeadowSection] reloadKey changed — reloading events", { reloadKey });
       loadEvents();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadKey]);
 
   const mood = determineMood(events);

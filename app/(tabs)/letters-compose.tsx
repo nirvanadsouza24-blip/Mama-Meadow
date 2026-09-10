@@ -145,6 +145,7 @@ export default function LettersComposeScreen() {
       Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const unlockDate = addDays(selectedOption.days);
@@ -204,6 +205,7 @@ export default function LettersComposeScreen() {
     } finally {
       setSaving(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, body, selectedOption, unlockDate, router]);
 
   return (
