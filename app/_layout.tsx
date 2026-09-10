@@ -41,13 +41,12 @@ export function setPaywallSkipped(val: boolean) {
 }
 
 function SubscriptionRedirect() {
-  const { isSubscribed, loading, packagesLoading } = useSubscription();
+  const { isSubscribed, loading } = useSubscription();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
     if (loading) return;
-    if (packagesLoading) return;
     const onOnboarding = pathname.startsWith("/onboarding");
     if (onOnboarding) return;
 
@@ -74,7 +73,7 @@ function SubscriptionRedirect() {
     });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSubscribed, loading, packagesLoading, pathname]);
+  }, [isSubscribed, loading, pathname]);
 
   return null;
 }

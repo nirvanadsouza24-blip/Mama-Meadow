@@ -65,8 +65,6 @@ interface SubscriptionContextType {
   packages: PurchasesPackage[];
   /** Loading state during initialization */
   loading: boolean;
-  /** True until packages are successfully loaded OR all retry attempts are exhausted */
-  packagesLoading: boolean;
   /** Whether running on web (purchases not available) */
   isWeb: boolean;
   /** Purchase a package - returns true if successful */
@@ -100,7 +98,6 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     useState<PurchasesOffering | null>(null);
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [packagesLoading, setPackagesLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
 
     // Fetch offerings via REST API for web platform
@@ -116,7 +113,6 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     };
 
     setPackages([mockPackage] as PurchasesPackage[]);
-    setPackagesLoading(false);
     console.log("[revenuecat] Web preview: showing real prices from dashboard");
   };
 
@@ -269,7 +265,6 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
 
         // If we got packages, we're done — no need to retry
         if (hasPackages) {
-          setPackagesLoading(false);
           return;
         }
 
@@ -280,10 +275,8 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
           await new Promise<void>((r) => setTimeout(r, delay));
         } else {
           console.warn("[RevenueCat] No offerings found after all attempts. Check RevenueCat dashboard configuration.");
-          // All attempts exhausted — unblock the paywall UI and start a background
-          // infinite retry loop (15s interval) so packages load silently if StoreKit
-          // eventually becomes ready (common on iPad / slow sandbox devices).
-          setPackagesLoading(false);
+          // All attempts exhausted — start a background infinite retry loop (15s interval)
+          // so packages load silently if StoreKit eventually becomes ready.
           startBackgroundOfferingsRetry();
         }
       } catch (error) {
@@ -293,8 +286,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
           console.log(`[RevenueCat] Retrying fetchOfferings in ${delay}ms...`);
           await new Promise<void>((r) => setTimeout(r, delay));
         } else {
-          // All attempts failed with errors — unblock UI and start background retry
-          setPackagesLoading(false);
+          // All attempts failed with errors — start background retry
           startBackgroundOfferingsRetry();
         }
       }
@@ -458,7 +450,6 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         currentOffering,
         packages,
         loading,
-        packagesLoading,
         isWeb,
         purchasePackage,
         restorePurchases,

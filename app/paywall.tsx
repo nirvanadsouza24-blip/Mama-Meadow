@@ -66,7 +66,6 @@ export default function PaywallScreen() {
   const {
     packages,
     loading,
-    packagesLoading,
     isSubscribed,
     isWeb,
     purchasePackage,
@@ -268,8 +267,7 @@ export default function PaywallScreen() {
     "rgba(90, 200, 250, 0.25)",  // Blue
   ];
 
-  // Loading state — keep spinner until both RC is initialized AND packages are loaded
-  if (loading || packagesLoading) {
+  if (loading) {
     return (
       <View style={styles.container}>
         <LinearGradient
@@ -278,11 +276,9 @@ export default function PaywallScreen() {
           end={{ x: 1, y: 1 }}
           style={styles.gradientBackground}
         >
-          {/* Decorative floating orbs */}
           <View style={[styles.floatingOrb, styles.orb1]} />
           <View style={[styles.floatingOrb, styles.orb2]} />
           <View style={[styles.floatingOrb, styles.orb3]} />
-
           <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
             <View style={styles.centeredContainer}>
               <ActivityIndicator size="large" color="#fff" />
@@ -560,13 +556,15 @@ export default function PaywallScreen() {
                 <TouchableOpacity
                   style={[
                     styles.primaryButton,
-                    purchasing && styles.buttonDisabled,
+                    (purchasing || packages.length === 0) && styles.buttonDisabled,
                   ]}
                   onPress={handlePurchase}
-                  disabled={purchasing}
+                  disabled={purchasing || packages.length === 0}
                 >
                   {purchasing ? (
                     <ActivityIndicator color="#764BA2" />
+                  ) : packages.length === 0 ? (
+                    <ActivityIndicator size="small" color="#764BA2" />
                   ) : (
                     <Text style={styles.primaryButtonText}>
                       {selectedPackage
