@@ -93,6 +93,7 @@ function AnimatedPressable({
 
 // ─── Lined paper background ───────────────────────────────────────────────────
 function LinedPaperLines({ height }: { height: number }) {
+  if (!height || height <= 0) return null;
   const lineCount = Math.floor(height / 32);
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -253,7 +254,11 @@ export default function LettersComposeScreen() {
 
                 {/* Unlock date display */}
                 <View style={styles.unlockDateRow}>
-                  <Text style={styles.unlockDateLabel}>This letter will open on</Text>
+                  <Text style={styles.unlockDateLabel}>
+                    {"This letter will be sealed for "}
+                    <Text style={styles.unlockDateLabelBold}>{selectedOption.label}</Text>
+                    {" and open on"}
+                  </Text>
                   <Text style={styles.unlockDateValue}>{unlockDateDisplay}</Text>
                 </View>
               </View>
@@ -281,7 +286,7 @@ export default function LettersComposeScreen() {
                   style={[styles.bodyContainer, { minHeight: bodyHeight }]}
                   onLayout={(e) => setBodyHeight(Math.max(320, e.nativeEvent.layout.height))}
                 >
-                  <LinedPaperLines height={bodyHeight} />
+                  <LinedPaperLines height={bodyHeight || 320} />
                   <TextInput
                     style={[styles.bodyInput, bodyFocused && styles.bodyInputFocused]}
                     placeholder={"Today I'm feeling...\n\nI want you to remember...\n\nBy the time you read this..."}
@@ -401,10 +406,15 @@ const styles = StyleSheet.create({
     borderColor: "rgba(200, 149, 108, 0.2)",
   },
   unlockDateLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: "Karla_400Regular",
-    color: COLORS.textTertiary,
-    marginBottom: 3,
+    color: COLORS.accent,
+    marginBottom: 4,
+    lineHeight: 19,
+  },
+  unlockDateLabelBold: {
+    fontFamily: "Karla_700Bold",
+    color: COLORS.accent,
   },
   unlockDateValue: {
     fontSize: 15,

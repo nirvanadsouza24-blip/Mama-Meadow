@@ -276,20 +276,27 @@ const gateStyles = StyleSheet.create({
 function LetterCard({ letter, index, onPress }: { letter: FutureLetter; index: number; onPress: () => void }) {
   const days = daysUntil(letter.unlock_date);
   const isUnlocked = days <= 0;
-  const statusText = isUnlocked ? "Ready to read ✨" : `Opens in ${days} day${days === 1 ? "" : "s"}`;
-  const statusColor = isUnlocked ? COLORS.primary : COLORS.textSecondary;
+  const formattedUnlockDate = formatDate(letter.unlock_date);
+
+  const statusLine = isUnlocked ? "💌 Ready to read!" : days < 30 ? `🔒 Opens in ${days} day${days === 1 ? "" : "s"}` : `🔒 Opens ${formattedUnlockDate}`;
+  const statusColor = isUnlocked ? "#4A7C59" : COLORS.textSecondary;
+
+  const subLine = isUnlocked ? `Unlocked ${formattedUnlockDate}` : `Written for: ${letter.unlock_period_label}`;
+
+  const cardBg = isUnlocked ? "#F0F7F2" : COLORS.surface;
+  const cardBorder = isUnlocked ? "rgba(74, 124, 89, 0.2)" : COLORS.border;
 
   return (
     <AnimatedListItem index={index}>
       <AnimatedPressable onPress={onPress} scaleValue={0.975}>
-        <View style={cardStyles.card}>
-          <View style={cardStyles.sealCircle}>
+        <View style={[cardStyles.card, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+          <View style={[cardStyles.sealCircle, isUnlocked && cardStyles.sealCircleUnlocked]}>
             <Text style={cardStyles.sealEmoji}>{isUnlocked ? "💌" : "📜"}</Text>
           </View>
           <View style={cardStyles.info}>
             <Text style={cardStyles.title} numberOfLines={1}>{letter.title}</Text>
-            <Text style={[cardStyles.status, { color: statusColor }]}>{statusText}</Text>
-            <Text style={cardStyles.period}>{letter.unlock_period_label}</Text>
+            <Text style={[cardStyles.status, { color: statusColor }]}>{statusLine}</Text>
+            <Text style={cardStyles.period}>{subLine}</Text>
           </View>
           <Text style={cardStyles.lockIcon}>{isUnlocked ? "💌" : "🔒"}</Text>
         </View>
@@ -324,6 +331,10 @@ const cardStyles = StyleSheet.create({
     borderColor: "rgba(200, 149, 108, 0.25)",
     justifyContent: "center",
     alignItems: "center",
+  },
+  sealCircleUnlocked: {
+    backgroundColor: "rgba(74, 124, 89, 0.12)",
+    borderColor: "rgba(74, 124, 89, 0.3)",
   },
   sealEmoji: { fontSize: 22 },
   info: { flex: 1 },
