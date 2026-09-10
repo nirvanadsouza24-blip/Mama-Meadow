@@ -41,12 +41,13 @@ export function setPaywallSkipped(val: boolean) {
 }
 
 function SubscriptionRedirect() {
-  const { isSubscribed, loading } = useSubscription();
+  const { isSubscribed, loading, packagesLoading } = useSubscription();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
     if (loading) return;
+    if (packagesLoading) return;
     const onOnboarding = pathname.startsWith("/onboarding");
     if (onOnboarding) return;
 
@@ -58,6 +59,7 @@ function SubscriptionRedirect() {
       const onPrivacy = pathname === "/privacy-policy" || pathname.includes("/privacy");
       if (onPaywall || onPrivacy) return;
       if (!isSubscribed && !paywallSkipped) {
+        console.log("[SubscriptionRedirect] Redirecting to paywall — not subscribed");
         router.replace("/paywall");
       }
     }).catch(() => {
@@ -66,12 +68,13 @@ function SubscriptionRedirect() {
       const onPrivacy = pathname === "/privacy-policy" || pathname.includes("/privacy");
       if (onPaywall || onPrivacy) return;
       if (!isSubscribed && !paywallSkipped) {
+        console.log("[SubscriptionRedirect] Redirecting to paywall — not subscribed (catch path)");
         router.replace("/paywall");
       }
     });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSubscribed, loading, pathname]);
+  }, [isSubscribed, loading, packagesLoading, pathname]);
 
   return null;
 }
