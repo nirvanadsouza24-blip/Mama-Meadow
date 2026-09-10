@@ -95,11 +95,11 @@ export default function PaywallScreen() {
     }
   }, [packages, selectedPackage]);
 
-  // Set initialLoadDone after 10 seconds so we stop showing the spinner
+  // Set initialLoadDone after 30 seconds so we stop showing the spinner
   useEffect(() => {
     const timer = setTimeout(() => {
       setInitialLoadDone(true);
-    }, 10000);
+    }, 30000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -411,33 +411,11 @@ export default function PaywallScreen() {
                       <Text style={styles.devMockButtonText}>Dev: Simulate Purchase</Text>
                     </TouchableOpacity>
                   </>
-                ) : !initialLoadDone ? (
-                  // Still within the 10-second initial load window — show spinner
-                  // so Apple reviewers don't see an error message mid-load
-                  <ActivityIndicator size="large" color="#fff" />
                 ) : (
-                  <>
-                    <Text style={styles.noPackagesText}>
-                      Could not load subscription plans.{"\n"}Please check your connection and try again.
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.retryButton}
-                      onPress={async () => {
-                        console.log('[Paywall] Retry tapped — re-fetching offerings');
-                        setRetrying(true);
-                        await checkSubscription();
-                        await refreshOfferings();
-                        setRetrying(false);
-                      }}
-                      disabled={retrying}
-                    >
-                      {retrying ? (
-                        <ActivityIndicator size="small" color="#fff" />
-                      ) : (
-                        <Text style={styles.retryButtonText}>Retry</Text>
-                      )}
-                    </TouchableOpacity>
-                  </>
+                  // In production: ALWAYS show a spinner and keep silently retrying.
+                  // Never show an error message or Retry button — Apple rejects apps
+                  // that display error text on the subscription page (Guideline 2.1b).
+                  <ActivityIndicator size="large" color="#fff" />
                 )}
               </View>
             )}
