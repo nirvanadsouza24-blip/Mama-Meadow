@@ -189,11 +189,6 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
 
         await Purchases.configure({ apiKey });
 
-        // Give Apple's sandbox StoreKit a moment after configure() before requesting products.
-        // Without this delay, getOfferings() can return empty results in the sandbox environment.
-        // 1500ms gives StoreKit more time to settle on Apple's sandbox/review devices.
-        await new Promise<void>((r) => setTimeout(r, 3000));
-
         // Listen for real-time subscription changes (e.g., purchase from another device)
         customerInfoListener = Purchases.addCustomerInfoUpdateListener(
           (customerInfo) => {
@@ -234,7 +229,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     if (isWeb) return;
 
     const MAX_ATTEMPTS = 10;
-    const BACKOFF_MS = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000];
+    const BACKOFF_MS = [1500, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000];
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
