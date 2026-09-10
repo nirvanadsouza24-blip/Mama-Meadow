@@ -22,6 +22,7 @@ import { BabiesProvider } from "@/contexts/BabiesContext";
 
 // Only wrap with ErrorBoundary in dev — production apps should not include it
 import { isOnboardingComplete } from "@/utils/onboardingStorage";
+import { getOrCreateDeviceId } from "@/utils/deviceId";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const DevErrorBoundary: React.ComponentType<{ children: React.ReactNode }> = __DEV__
   ? (require("@/components/ErrorBoundary").ErrorBoundary as React.ComponentType<{ children: React.ReactNode }>)
@@ -77,6 +78,10 @@ function SubscriptionRedirect() {
 
 export default function RootLayout() {
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    getOrCreateDeviceId().catch(() => {});
+  }, []);
   const pathname = usePathname();
   const colorScheme = useColorScheme();
   const networkState = useNetworkState();

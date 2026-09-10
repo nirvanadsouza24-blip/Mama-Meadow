@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getOrCreateDeviceId } from "@/utils/deviceId";
 import { usePremiumGate } from "@/hooks/usePremiumGate";
 import { supabase } from "@/app/integrations/supabase/client";
 
@@ -37,8 +37,6 @@ const COLORS = {
 const EDGE_FUNCTION_URL =
   "https://fhewklzevapipjnygomq.supabase.co/functions/v1/mama-chat";
 
-const DEVICE_ID_KEY = "mama_meadow_device_id";
-
 const OPENING_MESSAGE =
   "Hey Mama 🌸 I'm here for you. How are you feeling today? You can tell me anything — I'm listening with my whole heart. 💛";
 
@@ -53,20 +51,6 @@ const QUICK_REPLIES = [
 
 const ERROR_REPLY =
   "I'm having a little trouble right now, please try again 🌸";
-
-// ─── Device ID ────────────────────────────────────────────────────────────────
-async function getOrCreateDeviceId(): Promise<string> {
-  let id = await AsyncStorage.getItem(DEVICE_ID_KEY);
-  if (!id) {
-    id =
-      "device_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
-    await AsyncStorage.setItem(DEVICE_ID_KEY, id);
-    console.log("[MamaChat] Created new device_id:", id);
-  } else {
-    console.log("[MamaChat] Loaded existing device_id:", id);
-  }
-  return id;
-}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Message = {

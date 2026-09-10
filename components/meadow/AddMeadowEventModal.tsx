@@ -13,7 +13,7 @@ import {
   Keyboard,
   ActivityIndicator,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getOrCreateDeviceId } from "@/utils/deviceId";
 import { supabase } from "@/app/integrations/supabase/client";
 import { useBabies } from "@/contexts/BabiesContext";
 
@@ -82,7 +82,7 @@ export function AddMeadowEventModal({ visible, onClose, onSaved }: Props) {
     }
     setSaving(true);
     try {
-      const deviceId = await AsyncStorage.getItem("mama_meadow_device_id");
+      const deviceId = await getOrCreateDeviceId();
       const babyId = babies[0]?.id ?? null;
       const today = new Date().toISOString().split("T")[0];
       const selectedOption = EVENT_TYPE_OPTIONS.find((o) => o.type === selectedType);
@@ -99,7 +99,7 @@ export function AddMeadowEventModal({ visible, onClose, onSaved }: Props) {
       const { data: eventData, error: eventError } = await (supabase as any)
         .from("meadow_events")
         .insert({
-          device_id: deviceId ?? "unknown",
+          device_id: deviceId,
           baby_id: babyId,
           event_type: selectedType,
           emoji,
@@ -126,7 +126,7 @@ export function AddMeadowEventModal({ visible, onClose, onSaved }: Props) {
         console.log("[AddMeadowEventModal] Inserting meadow_memory to Supabase", { event_id: (eventData as any)?.id });
         const { error: memError } = await (supabase as any).from("meadow_memories").insert({
           event_id: (eventData as any)?.id ?? null,
-          device_id: deviceId ?? "unknown",
+          device_id: deviceId,
           title: title.trim(),
           what_happened: description.trim() || null,
           how_mama_felt: howMamaFelt.trim() || null,
