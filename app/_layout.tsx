@@ -35,11 +35,6 @@ export const unstable_settings = {
   initialRouteName: "(tabs)", // Ensure any route can link back to `/`
 };
 
-let paywallSkipped = false;
-export function setPaywallSkipped(val: boolean) {
-  paywallSkipped = val;
-}
-
 function SubscriptionRedirect() {
   const { isSubscribed, loading, packagesLoading } = useSubscription();
   const router = useRouter();
@@ -58,7 +53,7 @@ function SubscriptionRedirect() {
       const onPaywall = pathname === "/paywall";
       const onPrivacy = pathname === "/privacy-policy" || pathname.includes("/privacy");
       if (onPaywall || onPrivacy) return;
-      if (!isSubscribed && !paywallSkipped) {
+      if (!isSubscribed) {
         console.log("[SubscriptionRedirect] Redirecting to paywall — not subscribed");
         router.replace("/paywall");
       }
@@ -67,7 +62,7 @@ function SubscriptionRedirect() {
       const onPaywall = pathname === "/paywall";
       const onPrivacy = pathname === "/privacy-policy" || pathname.includes("/privacy");
       if (onPaywall || onPrivacy) return;
-      if (!isSubscribed && !paywallSkipped) {
+      if (!isSubscribed) {
         console.log("[SubscriptionRedirect] Redirecting to paywall — not subscribed (catch path)");
         router.replace("/paywall");
       }

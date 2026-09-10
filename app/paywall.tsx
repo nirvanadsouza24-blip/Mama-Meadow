@@ -24,7 +24,6 @@ import { useRouter } from "expo-router";
 import { PurchasesPackage } from "react-native-purchases";
 
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { setPaywallSkipped } from "./_layout";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -162,8 +161,7 @@ export default function PaywallScreen() {
   };
 
   const handleClose = () => {
-    console.log('[Paywall] Dismiss tapped — skipping paywall and navigating to home');
-    setPaywallSkipped(true);
+    console.log('[Paywall] Subscribed user closing paywall — navigating to home');
     router.replace("/(tabs)/(home)");
   };
 
@@ -591,17 +589,6 @@ export default function PaywallScreen() {
                   )}
                 </TouchableOpacity>
 
-                {/* Maybe Later — native only, for App Store screenshots */}
-                <TouchableOpacity
-                  style={styles.maybeLaterButton}
-                  onPress={() => {
-                    console.log('[Paywall] Maybe Later tapped — skipping paywall');
-                    handleClose();
-                  }}
-                >
-                  <Text style={styles.maybeLaterText}>Maybe Later</Text>
-                </TouchableOpacity>
-
                 {/* Legal Text - Required by App Store */}
                 <Text style={styles.legalText}>
                   Payment will be charged to your Apple ID account at confirmation of purchase. Subscription automatically renews unless canceled at least 24 hours before the end of the current period. Manage or cancel your subscription in your Apple ID Account Settings.{" "}
@@ -974,14 +961,6 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontSize: 16,
     color: "rgba(255, 255, 255, 0.9)",
-  },
-  maybeLaterButton: {
-    paddingVertical: 8,
-    alignItems: "center",
-  },
-  maybeLaterText: {
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.45)",
   },
   legalText: {
     fontSize: 11,
