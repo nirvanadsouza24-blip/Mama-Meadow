@@ -65,7 +65,6 @@ export default function PaywallScreen() {
   // Get subscription state and methods from context
   const {
     packages,
-    loading,
     isSubscribed,
     isWeb,
     purchasePackage,
@@ -80,14 +79,8 @@ export default function PaywallScreen() {
     useState<PurchasesPackage | null>(packages[0] || null);
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
-  const [retrying, setRetrying] = useState(false);
   const [webMockState, setWebMockState] = useState<"idle" | "processing">("idle");
   const [webMockDialogState, setWebMockDialogState] = useState<"hidden" | "selecting" | "failed">("hidden");
-  // Tracks whether the initial 10-second load window has elapsed.
-  // During this window, show a spinner instead of the error message so Apple
-  // reviewers don't see "Could not load subscription plans" mid-load.
-  const [initialLoadDone, setInitialLoadDone] = useState(false);
-
   // Update selected package when packages load
   useEffect(() => {
     if (packages.length > 0 && !selectedPackage) {
@@ -95,22 +88,13 @@ export default function PaywallScreen() {
     }
   }, [packages, selectedPackage]);
 
-  // Set initialLoadDone after 30 seconds so we stop showing the spinner
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setInitialLoadDone(true);
-    }, 30000);
-    return () => clearTimeout(timer);
-  }, []);
-
   // Handle purchase
   const handlePurchase = async () => {
     if (!selectedPackage) {
-      console.log('[Paywall] Subscribe tapped but no package selected — triggering re-fetch');
-      setRetrying(true);
-      await checkSubscription();
-      await refreshOfferings();
-      setRetrying(false);
+      // Packages not loaded yet — silently retry in background
+      console.log('[Paywall] Subscribe tapped but no package yet — retrying in background');
+      checkSubscription();
+      refreshOfferings();
       return;
     }
 
@@ -268,29 +252,6 @@ export default function PaywallScreen() {
     "rgba(90, 200, 250, 0.25)",  // Blue
   ];
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <LinearGradient
-          colors={["#667EEA", "#764BA2", "#f093fb"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradientBackground}
-        >
-          <View style={[styles.floatingOrb, styles.orb1]} />
-          <View style={[styles.floatingOrb, styles.orb2]} />
-          <View style={[styles.floatingOrb, styles.orb3]} />
-          <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
-            <View style={styles.centeredContainer}>
-              <ActivityIndicator size="large" color="#fff" />
-              <Text style={styles.loadingText}>Loading...</Text>
-            </View>
-          </SafeAreaView>
-        </LinearGradient>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -387,7 +348,7 @@ export default function PaywallScreen() {
             )}
 
             {/* No packages available - only show on native */}
-            {!isWeb && packages.length === 0 && !loading && (
+            {!isWeb && packages.length === 0 && (
               <View style={styles.noPackagesContainer}>
                 {__DEV__ ? (
                   <>
@@ -557,22 +518,18 @@ export default function PaywallScreen() {
                 <TouchableOpacity
                   style={[
                     styles.primaryButton,
-                    (purchasing || packages.length === 0) && styles.buttonDisabled,
+                    purchasing && styles.buttonDisabled,
                   ]}
                   onPress={handlePurchase}
-                  disabled={purchasing || packages.length === 0}
+                  disabled={purchasing}
                 >
                   {purchasing ? (
                     <ActivityIndicator color="#764BA2" />
-                  ) : packages.length === 0 ? (
-                    <ActivityIndicator size="small" color="#764BA2" />
                   ) : (
                     <Text style={styles.primaryButtonText}>
-                      {selectedPackage
-                        ? (selectedPackage.product.priceString
-                            ? `Subscribe for ${selectedPackage.product.priceString}`
-                            : "Subscribe")
-                        : "Subscribe"}
+                      {selectedPackage?.product?.priceString
+                        ? `Subscribe for ${selectedPackage.product.priceString}`
+                        : "Subscribe Now"}
                     </Text>
                   )}
                 </TouchableOpacity>

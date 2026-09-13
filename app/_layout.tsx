@@ -67,7 +67,7 @@ export async function setPaywallSkipped(val: boolean): Promise<void> {
 }
 
 function SubscriptionRedirect() {
-  const { isSubscribed, loading } = useSubscription();
+  const { isSubscribed } = useSubscription();
   const router = useRouter();
   const pathname = usePathname();
   const [paywallSkipped, setPaywallSkippedState] = useState<boolean | null>(null);
@@ -78,8 +78,8 @@ function SubscriptionRedirect() {
   }, []);
 
   useEffect(() => {
-    // Wait until both subscription and skip-flag are resolved
-    if (loading || paywallSkipped === null) return;
+    // Wait until skip-flag is resolved
+    if (paywallSkipped === null) return;
     const onOnboarding = pathname.startsWith("/onboarding");
     if (onOnboarding) return;
 
@@ -106,7 +106,7 @@ function SubscriptionRedirect() {
     });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSubscribed, loading, pathname, paywallSkipped]);
+  }, [isSubscribed, pathname, paywallSkipped]);
 
   return null;
 }

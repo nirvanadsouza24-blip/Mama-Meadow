@@ -74,8 +74,6 @@ interface SubscriptionContextType {
   currentOffering: PurchasesOffering | null;
   /** Available packages in the current offering */
   packages: PurchasesPackage[];
-  /** Loading state during initialization */
-  loading: boolean;
   /** Whether running on web (purchases not available) */
   isWeb: boolean;
   /** Purchase a package - returns true if successful */
@@ -108,7 +106,6 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   const [currentOffering, setCurrentOffering] =
     useState<PurchasesOffering | null>(null);
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
-  const [loading, setLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
 
     // Fetch offerings via REST API for web platform
@@ -132,7 +129,6 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     let customerInfoListener: { remove: () => void } | null = null;
 
     const initRevenueCat = async () => {
-      let loadingCleared = false;
       try {
         // Web platform: SDK doesn't work, use REST API for basic info
         if (isWeb) {
@@ -141,7 +137,6 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
           if (typeof window !== "undefined" && localStorage.getItem(MOCK_PURCHASE_KEY) === "true") {
             setIsSubscribed(true);
           }
-          setLoading(false);
           return;
         }
 
@@ -161,7 +156,6 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
               setIsSubscribed(true);
             }
           }
-          setLoading(false);
           return;
         }
 
@@ -180,7 +174,6 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
             "[RevenueCat] API key not provided for this platform. " +
             "Please add revenueCatApiKeyIos/revenueCatApiKeyAndroid to app.json extra."
           );
-          setLoading(false);
           return;
         }
 
@@ -195,8 +188,8 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
           }
         }
 
-        // Restore cached packages before setLoading(false) so the paywall renders
-        // with prices already populated on the very first render (second launch onward).
+        // Restore cached packages so the paywall renders with prices already populated
+        // on the very first render (second launch onward).
         try {
           const cachedPkgsRaw = await SecureStore.getItemAsync(PACKAGES_CACHE_KEY);
           if (cachedPkgsRaw) {
@@ -226,23 +219,13 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
           }
         );
 
-        // ✅ Mark loading done NOW — paywall renders immediately with skeleton/spinner
-        // on the Subscribe button while offerings load in the background.
-        loadingCleared = true;
-        setLoading(false);
-        console.log("[RevenueCat] configure() succeeded — paywall unblocked, fetching offerings in background");
+        console.log("[RevenueCat] configure() succeeded — fetching offerings in background");
 
         // These run in background — packages appear on the Subscribe button when ready
         await fetchOfferings();
         await checkSubscription();
       } catch (error) {
         console.error("[RevenueCat] Failed to initialize:", error);
-      } finally {
-        // Only call setLoading(false) here if it wasn't already cleared above
-        // (covers error paths and any early-return paths that didn't set it)
-        if (!loadingCleared) {
-          setLoading(false);
-        }
       }
     };
 
@@ -495,7 +478,6 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         offerings,
         currentOffering,
         packages,
-        loading,
         isWeb,
         purchasePackage,
         restorePurchases,

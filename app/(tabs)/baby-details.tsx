@@ -10,7 +10,6 @@ import {
   Platform,
   Modal,
   Alert,
-  ActivityIndicator,
   Image,
   ImageSourcePropType,
   FlatList,
@@ -962,15 +961,7 @@ function BabyCard({ baby, index }: { baby: Baby; index: number }) {
 
 export default function BabyDetailsScreen() {
   const { babies } = useBabies();
-  const { loading } = usePremiumGate();
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FAF7F2" }}>
-        <ActivityIndicator size="large" color="#4A7C59" />
-      </View>
-    );
-  }
+  usePremiumGate();
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={["bottom"]}>

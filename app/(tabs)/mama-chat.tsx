@@ -209,7 +209,7 @@ function LockedState() {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function MamaChatScreen() {
   const router = useRouter();
-  const { isSubscribed, loading } = usePremiumGate();
+  const { isSubscribed } = usePremiumGate();
   const scrollRef = useRef<ScrollView>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
@@ -383,7 +383,7 @@ export default function MamaChatScreen() {
     router.back();
   };
 
-  if (loading || isLoadingHistory) {
+  if (isLoadingHistory) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FAF7F2" }}>
         <ActivityIndicator size="large" color="#4A7C59" />

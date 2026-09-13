@@ -186,7 +186,7 @@ function ArticleModal({ topic, onClose }: { topic: Topic; onClose: () => void })
 }
 
 export default function WellnessScreen() {
-  const { loading } = usePremiumGate();
+  usePremiumGate();
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [fetchLoading, setFetchLoading] = useState(true);
@@ -215,7 +215,7 @@ export default function WellnessScreen() {
     setSelectedTopic(topic);
   };
 
-  if (loading || fetchLoading) {
+  if (fetchLoading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FAF7F2" }}>
         <ActivityIndicator size="large" color="#4A7C59" />
