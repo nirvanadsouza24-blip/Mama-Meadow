@@ -121,6 +121,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     let customerInfoListener: { remove: () => void } | null = null;
 
     const initRevenueCat = async () => {
+      let loadingCleared = false;
       try {
         // Web platform: SDK doesn't work, use REST API for basic info
         if (isWeb) {
@@ -199,15 +200,23 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
           }
         );
 
-        // Fetch available products/packages
-        await fetchOfferings();
+        // ✅ Mark loading done NOW — paywall renders immediately with skeleton/spinner
+        // on the Subscribe button while offerings load in the background.
+        loadingCleared = true;
+        setLoading(false);
+        console.log("[RevenueCat] configure() succeeded — paywall unblocked, fetching offerings in background");
 
-        // Check initial subscription status
+        // These run in background — packages appear on the Subscribe button when ready
+        await fetchOfferings();
         await checkSubscription();
       } catch (error) {
         console.error("[RevenueCat] Failed to initialize:", error);
       } finally {
-        setLoading(false);
+        // Only call setLoading(false) here if it wasn't already cleared above
+        // (covers error paths and any early-return paths that didn't set it)
+        if (!loadingCleared) {
+          setLoading(false);
+        }
       }
     };
 
