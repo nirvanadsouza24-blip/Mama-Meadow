@@ -6,7 +6,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { SystemBars } from "react-native-edge-to-edge";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { useColorScheme, Alert, ActivityIndicator, View } from "react-native";
+import { useColorScheme, Alert, ActivityIndicator, View, Platform } from "react-native";
 import { useNetworkState } from "expo-network";
 import {
   DarkTheme,
@@ -15,6 +15,7 @@ import {
   ThemeProvider,
 } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
+import * as SecureStore from "expo-secure-store";
 import { WidgetProvider } from "@/contexts/WidgetContext";
 import { SubscriptionProvider, useSubscription } from "@/contexts/SubscriptionContext";
 import { BabiesProvider } from "@/contexts/BabiesContext";
@@ -23,6 +24,7 @@ import { BabiesProvider } from "@/contexts/BabiesContext";
 // Only wrap with ErrorBoundary in dev — production apps should not include it
 import { isOnboardingComplete } from "@/utils/onboardingStorage";
 import { getOrCreateDeviceId } from "@/utils/deviceId";
+import Constants from "expo-constants";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const DevErrorBoundary: React.ComponentType<{ children: React.ReactNode }> = __DEV__
   ? (require("@/components/ErrorBoundary").ErrorBoundary as React.ComponentType<{ children: React.ReactNode }>)
@@ -35,18 +37,49 @@ export const unstable_settings = {
   initialRouteName: "(tabs)", // Ensure any route can link back to `/`
 };
 
-let paywallSkipped = false;
-export function setPaywallSkipped(val: boolean) {
-  paywallSkipped = val;
+// ─── Persisted free-tier flag ─────────────────────────────────────────────────
+// Persisted to SecureStore so "Maybe Later" survives app restarts.
+// This is valid under Apple Guideline 3.1.1 because the app has a genuine free
+// tier — premium features are individually gated via usePremiumGate().
+const _PROJECT_SCOPE = Constants.expoConfig?.extra?.nativelyProjectId || Constants.expoConfig?.slug || "app";
+const PAYWALL_SKIPPED_KEY = `paywall_skipped_${_PROJECT_SCOPE}`;
+
+async function getPaywallSkipped(): Promise<boolean> {
+  try {
+    if (Platform.OS === "web") return localStorage.getItem(PAYWALL_SKIPPED_KEY) === "true";
+    const val = await SecureStore.getItemAsync(PAYWALL_SKIPPED_KEY);
+    return val === "true";
+  } catch {
+    return false;
+  }
+}
+
+export async function setPaywallSkipped(val: boolean): Promise<void> {
+  try {
+    if (Platform.OS === "web") {
+      if (val) localStorage.setItem(PAYWALL_SKIPPED_KEY, "true");
+      else localStorage.removeItem(PAYWALL_SKIPPED_KEY);
+      return;
+    }
+    if (val) await SecureStore.setItemAsync(PAYWALL_SKIPPED_KEY, "true");
+    else await SecureStore.deleteItemAsync(PAYWALL_SKIPPED_KEY);
+  } catch {}
 }
 
 function SubscriptionRedirect() {
   const { isSubscribed, loading } = useSubscription();
   const router = useRouter();
   const pathname = usePathname();
+  const [paywallSkipped, setPaywallSkippedState] = useState<boolean | null>(null);
+
+  // Load persisted skip flag once on mount
+  useEffect(() => {
+    getPaywallSkipped().then(setPaywallSkippedState).catch(() => setPaywallSkippedState(false));
+  }, []);
 
   useEffect(() => {
-    if (loading) return;
+    // Wait until both subscription and skip-flag are resolved
+    if (loading || paywallSkipped === null) return;
     const onOnboarding = pathname.startsWith("/onboarding");
     if (onOnboarding) return;
 
@@ -73,7 +106,7 @@ function SubscriptionRedirect() {
     });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSubscribed, loading, pathname]);
+  }, [isSubscribed, loading, pathname, paywallSkipped]);
 
   return null;
 }

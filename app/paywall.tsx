@@ -162,7 +162,8 @@ export default function PaywallScreen() {
 
   const handleClose = () => {
     console.log('[Paywall] Dismiss tapped — skipping paywall and navigating to home');
-    setPaywallSkipped(true);
+    // Persist the free-tier choice so it survives app restarts
+    setPaywallSkipped(true).catch(() => {});
     router.replace("/(tabs)/(home)");
   };
 
