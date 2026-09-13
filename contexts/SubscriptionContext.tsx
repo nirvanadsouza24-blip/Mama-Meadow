@@ -53,6 +53,17 @@ const MOCK_PURCHASE_KEY = `rc_mock_purchased_${_PROJECT_SCOPE}`;
 const MOCK_NATIVE_KEY = `rc_dev_native_${_PROJECT_SCOPE}`;
 // Scoped native cache key — persists real subscription state for fast restore on bundle reload
 const NATIVE_PURCHASE_KEY = `rc_subscribed_${_PROJECT_SCOPE}`;
+// Scoped package cache key — persists essential package data for instant paywall render
+const PACKAGES_CACHE_KEY = `rc_cached_packages_${_PROJECT_SCOPE}`;
+
+type CachedPackage = {
+  identifier: string;
+  product: {
+    title: string;
+    priceString: string;
+    description: string;
+  };
+};
 
 interface SubscriptionContextType {
   /** Whether the user has an active subscription */
@@ -184,6 +195,21 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
           }
         }
 
+        // Restore cached packages before setLoading(false) so the paywall renders
+        // with prices already populated on the very first render (second launch onward).
+        try {
+          const cachedPkgsRaw = await SecureStore.getItemAsync(PACKAGES_CACHE_KEY);
+          if (cachedPkgsRaw) {
+            const cachedPkgs: CachedPackage[] = JSON.parse(cachedPkgsRaw);
+            if (Array.isArray(cachedPkgs) && cachedPkgs.length > 0) {
+              setPackages(cachedPkgs as unknown as PurchasesPackage[]);
+              console.log("[RevenueCat] Restored", cachedPkgs.length, "package(s) from cache — paywall renders instantly");
+            }
+          }
+        } catch {
+          // Corrupt cache — ignore and proceed with normal fetch
+        }
+
         await Purchases.configure({ apiKey });
 
         // Listen for real-time subscription changes (e.g., purchase from another device)
@@ -272,8 +298,19 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
           );
         }
 
-        // If we got packages, we're done — no need to retry
+        // If we got packages, persist them to cache and exit
         if (hasPackages) {
+          const pkgsToCache = (fetchedOfferings.current?.availablePackages ?? allOfferings[0]?.availablePackages ?? [])
+            .map((pkg): CachedPackage => ({
+              identifier: pkg.identifier,
+              product: {
+                title: pkg.product.title,
+                priceString: pkg.product.priceString,
+                description: pkg.product.description,
+              },
+            }));
+          SecureStore.setItemAsync(PACKAGES_CACHE_KEY, JSON.stringify(pkgsToCache)).catch(() => {});
+          console.log("[RevenueCat] Package cache updated with", pkgsToCache.length, "package(s)");
           return;
         }
 
