@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 import { supabase } from "@/app/integrations/supabase/client";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useBabies } from "@/contexts/BabiesContext";
+import { getOrCreateDeviceId } from "@/utils/deviceId";
 import { AddMeadowEventModal } from "./AddMeadowEventModal";
 import { MeadowMemoryModal } from "./MeadowMemoryModal";
 import type { MeadowEvent } from "./MeadowMemoryModal";
@@ -221,18 +222,18 @@ export function MeadowSection({ onAddPress, reloadKey }: MeadowSectionProps = {}
 
   const loadEvents = useCallback(async () => {
     const babyId = babies[0]?.id ?? null;
-    console.log("[MeadowSection] Loading meadow events from Supabase", { babyId });
+    const deviceId = await getOrCreateDeviceId();
+    console.log("[MeadowSection] Loading meadow events from Supabase", { babyId, deviceId });
     try {
       let query = (supabase as any)
         .from("meadow_events")
         .select("*")
+        .eq("device_id", deviceId)
         .order("event_date", { ascending: false })
         .limit(50);
 
       if (babyId) {
         query = query.eq("baby_id", babyId);
-      } else {
-        console.log("[MeadowSection] No baby_id available, loading all events");
       }
 
       const { data, error } = await query;
