@@ -72,7 +72,6 @@ export default function PaywallScreen() {
     checkSubscription,
     refreshOfferings,
     mockWebPurchase,
-    mockNativePurchase,
   } = useSubscription();
 
   const [selectedPackage, setSelectedPackage] =
@@ -91,10 +90,11 @@ export default function PaywallScreen() {
   // Handle purchase
   const handlePurchase = async () => {
     if (!selectedPackage) {
-      // Packages not loaded yet — silently retry in background
-      console.log('[Paywall] Subscribe tapped but no package yet — retrying in background');
-      checkSubscription();
+      // Packages not loaded yet — trigger a fresh fetch and show brief spinner
+      setPurchasing(true);
       refreshOfferings();
+      checkSubscription();
+      setTimeout(() => setPurchasing(false), 2000);
       return;
     }
 
@@ -344,38 +344,6 @@ export default function PaywallScreen() {
                     </TouchableOpacity>
                   );
                 })}
-              </View>
-            )}
-
-            {/* No packages available - only show on native */}
-            {!isWeb && packages.length === 0 && (
-              <View style={styles.noPackagesContainer}>
-                {__DEV__ ? (
-                  <>
-                    <Text style={styles.noPackagesText}>
-                      Purchases are not available in standard Expo Go.
-                    </Text>
-                    <Text style={[styles.noPackagesText, { marginTop: 8, opacity: 0.7 }]}>
-                      To test purchases, use a development build or production build.
-                      {"\n"}This is expected — your onboarding and storage are working correctly.
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.devMockButton}
-                      onPress={async () => {
-                        console.log('[Paywall] Dev: Simulate Purchase tapped');
-                        await mockNativePurchase();
-                        router.replace("/(tabs)/(home)");
-                      }}
-                    >
-                      <Text style={styles.devMockButtonText}>Dev: Simulate Purchase</Text>
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  // In production: ALWAYS show a spinner and keep silently retrying.
-                  // Never show an error message or Retry button — Apple rejects apps
-                  // that display error text on the subscription page (Guideline 2.1b).
-                  <ActivityIndicator size="large" color="#fff" />
-                )}
               </View>
             )}
 
@@ -823,30 +791,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "rgba(255, 255, 255, 0.75)",
     marginTop: 4,
-  },
-  noPackagesContainer: {
-    padding: 24,
-    alignItems: "center",
-  },
-  noPackagesText: {
-    fontSize: 16,
-    color: "rgba(255, 255, 255, 0.85)",
-    textAlign: "center",
-  },
-  devMockButton: {
-    marginTop: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.4)",
-    borderStyle: "dashed",
-    alignItems: "center",
-  },
-  devMockButtonText: {
-    color: "rgba(255, 255, 255, 0.7)",
-    fontSize: 13,
-    textAlign: "center",
   },
   retryButton: {
     marginTop: 16,
