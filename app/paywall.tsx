@@ -89,12 +89,21 @@ export default function PaywallScreen() {
 
   // Handle purchase
   const handlePurchase = async () => {
+    console.log('[Paywall] Subscribe button tapped, selectedPackage:', selectedPackage?.identifier ?? 'null');
     if (!selectedPackage) {
-      // Packages not loaded yet — trigger a fresh fetch and show brief spinner
+      // Packages not loaded yet — trigger a fresh fetch, show spinner, then alert user
+      console.log('[Paywall] No package selected — packages not loaded yet, refreshing offerings');
       setPurchasing(true);
       refreshOfferings();
       checkSubscription();
-      setTimeout(() => setPurchasing(false), 2000);
+      setTimeout(() => {
+        setPurchasing(false);
+        Alert.alert(
+          "Loading Subscription Options",
+          "Subscription options are still loading. Please try again in a moment.",
+          [{ text: "OK" }]
+        );
+      }, 2000);
       return;
     }
 
@@ -493,12 +502,14 @@ export default function PaywallScreen() {
                 >
                   {purchasing ? (
                     <ActivityIndicator color="#764BA2" />
-                  ) : (
+                  ) : packages.length === 0 ? (
+                    <Text style={styles.primaryButtonText}>Loading...</Text>
+                  ) : selectedPackage?.product?.priceString ? (
                     <Text style={styles.primaryButtonText}>
-                      {selectedPackage?.product?.priceString
-                        ? `Subscribe for ${selectedPackage.product.priceString}`
-                        : "Subscribe Now"}
+                      {`Subscribe for ${selectedPackage.product.priceString}`}
                     </Text>
+                  ) : (
+                    <Text style={styles.primaryButtonText}>Subscribe Now</Text>
                   )}
                 </TouchableOpacity>
 
