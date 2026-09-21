@@ -457,6 +457,30 @@ export default function HomeScreen() {
           </FadeInView>
         )}
 
+        {/* View Plans — only when subscribed (for App Store review screenshots) */}
+        {isSubscribed && (
+          <FadeInView delay={120}>
+            <AnimatedPressable onPress={() => {
+              console.log("[HomeScreen] View Plans button pressed — navigating to paywall for screenshot");
+              router.push("/paywall");
+            }} scaleValue={0.975}>
+              <View style={styles.viewPlansCard}>
+                <View style={styles.premiumCardLeft}>
+                  <Text style={styles.viewPlansCardTitle}>
+                    Premium Member
+                  </Text>
+                  <Text style={styles.viewPlansCardSubtitle}>
+                    View subscription plans
+                  </Text>
+                </View>
+                <View style={styles.viewPlansCardButton}>
+                  <Text style={styles.viewPlansCardButtonText}>View Plans</Text>
+                </View>
+              </View>
+            </AnimatedPressable>
+          </FadeInView>
+        )}
+
         {/* Your little ones section */}
         <FadeInView delay={160}>
           <View style={styles.sectionHeaderRow}>
@@ -642,6 +666,52 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     color: "#fff",
+    fontFamily: "Karla_700Bold",
+  },
+
+  // View Plans card (subscriber only)
+  viewPlansCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  viewPlansCardTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.text,
+    fontFamily: "Fraunces_700Bold",
+    letterSpacing: -0.2,
+    marginBottom: 2,
+  },
+  viewPlansCardSubtitle: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontFamily: "Karla_400Regular",
+  },
+  viewPlansCardButton: {
+    backgroundColor: COLORS.primaryMuted,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(74, 124, 89, 0.2)",
+    marginLeft: 12,
+  },
+  viewPlansCardButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.primary,
     fontFamily: "Karla_700Bold",
   },
 

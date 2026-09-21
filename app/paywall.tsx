@@ -20,7 +20,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useNavigation } from "expo-router";
 import { PurchasesPackage } from "react-native-purchases";
 
 import { useSubscription } from "@/contexts/SubscriptionContext";
@@ -61,6 +61,7 @@ const colors = {
 
 export default function PaywallScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
 
   // Get subscription state and methods from context
   const {
@@ -154,10 +155,16 @@ export default function PaywallScreen() {
   };
 
   const handleClose = () => {
-    console.log('[Paywall] Dismiss tapped — skipping paywall and navigating to home');
-    // Persist the free-tier choice so it survives app restarts
-    setPaywallSkipped(true).catch(() => {});
-    router.replace("/(tabs)/(home)");
+    console.log('[Paywall] Dismiss tapped');
+    if (navigation.canGoBack()) {
+      console.log('[Paywall] Navigating back (opened from subscriber screen)');
+      router.back();
+    } else {
+      console.log('[Paywall] Skipping paywall and navigating to home');
+      // Persist the free-tier choice so it survives app restarts
+      setPaywallSkipped(true).catch(() => {});
+      router.replace("/(tabs)/(home)");
+    }
   };
 
   // Handle web mock purchase (replicates RevenueCat test store flow for web preview)
@@ -188,71 +195,6 @@ export default function PaywallScreen() {
     );
   };
 
-  // Already subscribed - show celebration confirmation
-  if (isSubscribed) {
-    return (
-      <View style={styles.subscribedContainer}>
-        <LinearGradient
-          colors={["#667EEA", "#764BA2", "#f093fb"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.subscribedGradient}
-        >
-          {/* Decorative floating orbs */}
-          <View style={[styles.floatingOrb, styles.orb1]} />
-          <View style={[styles.floatingOrb, styles.orb2]} />
-          <View style={[styles.floatingOrb, styles.orb3]} />
-
-          <SafeAreaView edges={["top", "bottom"]} style={styles.subscribedSafeArea}>
-            {/* Close button */}
-            <TouchableOpacity style={styles.subscribedCloseButton} onPress={handleClose}>
-              <Text style={styles.subscribedCloseText}>✕</Text>
-            </TouchableOpacity>
-
-            <View style={styles.subscribedContent}>
-              {/* Celebration icon with glow */}
-              <View style={styles.celebrationIconContainer}>
-                <View style={styles.celebrationGlow} />
-                <Text style={styles.celebrationIcon}>🎉</Text>
-              </View>
-
-              {/* PRO MEMBER badge */}
-              <View style={styles.proMemberBadge}>
-                <Text style={styles.proMemberText}>PRO MEMBER</Text>
-              </View>
-
-              {/* Title */}
-              <Text style={styles.subscribedTitle}>You're All Set!</Text>
-              <Text style={styles.subscribedSubtitle}>
-                Welcome to the premium experience
-              </Text>
-
-              {/* Features card */}
-              <View style={styles.featuresCard}>
-                <Text style={styles.featuresCardTitle}>Unlocked Features</Text>
-                {FEATURES.slice(0, 3).map((feature, index) => (
-                  <View key={index} style={styles.featureCheckRow}>
-                    <View style={styles.checkCircle}>
-                      <Text style={styles.checkMark}>✓</Text>
-                    </View>
-                    <Text style={styles.featureCheckText}>{feature.title}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* Start Exploring button */}
-              <TouchableOpacity style={styles.exploreButton} onPress={handleClose}>
-                <View style={styles.exploreButtonInner}>
-                  <Text style={styles.exploreButtonText}>Start Exploring</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </SafeAreaView>
-        </LinearGradient>
-      </View>
-    );
-  }
-
   // Feature icon background colors (rotating by index)
   const featureIconColors = [
     "rgba(255, 215, 0, 0.25)",   // Gold
@@ -275,12 +217,10 @@ export default function PaywallScreen() {
         <View style={[styles.floatingOrb, styles.orb3]} />
 
         <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
-          {/* Close button — web preview only */}
-          {isWeb && (
-            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
-          )}
+          {/* Close button — always visible so subscribers can dismiss */}
+          <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+            <Text style={styles.closeButtonText}>✕</Text>
+          </TouchableOpacity>
 
           <ScrollView
             style={styles.scrollView}
